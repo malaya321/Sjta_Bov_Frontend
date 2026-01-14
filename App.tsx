@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import AppNavigator from './src/navigation/AppNavigator';
+import Navigation from './src/navigation';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +27,7 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
-      <AppNavigator />
+      <Navigation />
     </SafeAreaProvider>
   );
 };
