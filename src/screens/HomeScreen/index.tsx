@@ -13,8 +13,6 @@ import {
   Alert,
   Image,
 } from 'react-native';
-
-// Ensure these are installed: npm install lucide-react-native react-native-svg
 import {
   User,
   Power,
@@ -29,6 +27,7 @@ import {
   LogOut,
   Navigation as NavIcon,
   X,
+  ShieldCheck,
 } from 'lucide-react-native';
 
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
@@ -99,7 +98,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             </View>
             <View style={styles.headerIcons}>
               <TouchableOpacity style={styles.notificationButton} onPress={() => setHasNotifications(false)}>
-                <Bell size={24} color="#64748B" />
+                <Bell size={20} color="#94A3B8" />
                 {hasNotifications && <View style={styles.notificationBadge} />}
               </TouchableOpacity>
               <View style={styles.avatarContainer}>
@@ -110,7 +109,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
 
           <View style={styles.profileCard}>
             <View style={styles.profileContent}>
-              <View style={{ flex: 1 }}>
+              <View>
                 <Text style={styles.shiftText}>{driverData.shift}</Text>
                 <Text style={styles.driverName}>{driverData.name}</Text>
                 <View style={styles.idBadge}>
@@ -119,7 +118,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 </View>
               </View>
               <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-                <LogOut size={24} color="#FFFFFF" />
+                <LogOut size={22} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -131,7 +130,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Shift Attendance</Text>
               <View style={styles.gpsBadge}>
-                <MapPin size={14} color="#D97706" />
+                <MapPin size={10} color="#D97706" />
                 <Text style={styles.gpsText}>GPS Recorded</Text>
               </View>
             </View>
@@ -139,7 +138,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
               <View style={styles.attendanceContent}>
                 <View style={styles.attendanceLeft}>
                   <View style={[styles.attendanceIcon, isCheckedIn ? styles.attendanceIconActive : styles.attendanceIconInactive]}>
-                    {isCheckedIn ? <CheckCircle2 size={30} color="#FFFFFF" /> : <Power size={30} color="#94A3B8" />}
+                    {isCheckedIn ? <CheckCircle2 size={32} color="#FFFFFF" /> : <Power size={32} color="#CBD5E1" />}
                   </View>
                   <View>
                     <Text style={styles.attendanceStatus}>{isCheckedIn ? 'Shift Active' : 'Off-Duty'}</Text>
@@ -172,7 +171,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 </View>
                 <View style={styles.vehicleStats}>
                   <View style={styles.batteryContainer}>
-                    <Battery size={20} color={batteryLevel < 20 ? '#DC2626' : '#22C55E'} />
+                    <Battery size={18} color={batteryLevel < 20 ? '#DC2626' : '#22C55E'} />
                     <Text style={styles.batteryText}>{batteryLevel}%</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusColors[vehicleStatus].bg, borderColor: statusColors[vehicleStatus].border }]}>
@@ -188,10 +187,10 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                     onPress={() => setVehicleStatus(status)}
                     style={[styles.statusButton, vehicleStatus === status && styles.statusButtonActive, !isCheckedIn && styles.statusButtonDisabled]}
                   >
-                    {status === 'Running' && <NavIcon size={22} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Charging' && <RotateCcw size={22} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Cleaning' && <CheckCircle2 size={22} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Fault' && <AlertTriangle size={22} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
+                    {status === 'Running' && <NavIcon size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
+                    {status === 'Charging' && <RotateCcw size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
+                    {status === 'Cleaning' && <CheckCircle2 size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
+                    {status === 'Fault' && <AlertTriangle size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
                     <Text style={[styles.statusButtonText, vehicleStatus === status && styles.statusButtonTextActive]}>{status}</Text>
                   </TouchableOpacity>
                 ))}
@@ -202,19 +201,19 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           {/* Action Grid */}
           <View style={styles.actionGrid}>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, styles.reportIcon]}><AlertTriangle size={28} color="#DC2626" /></View>
+              <View style={[styles.actionIcon, styles.reportIcon]}><AlertTriangle size={24} color="#DC2626" /></View>
               <Text style={styles.actionTitle}>Report Fault</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, styles.photoIcon]}><Camera size={28} color="#D97706" /></View>
+              <View style={[styles.actionIcon, styles.photoIcon]}><Camera size={24} color="#D97706" /></View>
               <Text style={styles.actionTitle}>Battery Photo</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-      {/* Verification Modal */}
-      <Modal visible={showAuthModal} transparent animationType="fade">
+      {/* Check-in Modal */}
+      <Modal visible={showAuthModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -224,25 +223,18 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <View style={styles.stepContent}>
               {authStep === 1 ? (
                 <>
-                  <View style={styles.faceAuthContainer}>
-                    <User size={48} color="#D97706" />
-                  </View>
-                  <TouchableOpacity style={styles.authButton} onPress={nextAuthStep}>
-                    <Text style={styles.authButtonText}>Verify Face</Text>
-                  </TouchableOpacity>
+                  <View style={styles.faceAuthContainer}><User size={60} color="#E2E8F0" /></View>
+                  <TouchableOpacity style={styles.authButton} onPress={nextAuthStep}><Text style={styles.authButtonText}>Verify Face</Text></TouchableOpacity>
                 </>
               ) : (
                 <>
                   <TextInput 
                     style={styles.batteryTextInput} 
                     placeholder="Enter battery status remarks..." 
-                    placeholderTextColor="#94A3B8"
                     onChangeText={setBatteryText}
                     multiline
                   />
-                  <TouchableOpacity style={styles.finishButton} onPress={nextAuthStep}>
-                    <Text style={styles.finishButtonText}>Complete Check-In</Text>
-                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.finishButton} onPress={nextAuthStep}><Text style={styles.finishButtonText}>Complete</Text></TouchableOpacity>
                 </>
               )}
             </View>
@@ -256,80 +248,82 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: 40 },
-  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 10 : 10, paddingBottom: 25, borderBottomLeftRadius: 32, borderBottomRightRadius: 32, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+  scrollContent: { paddingBottom: 100 },
+  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 20 : 10, paddingBottom: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 5 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 44, height: 44, backgroundColor: '#D97706', borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  logoText: { color: '#FFFFFF', fontWeight: '900', fontSize: 22 },
-  logoSubtitle: { color: '#D97706', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  logoTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
-  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  notificationButton: { width: 44, height: 44, backgroundColor: '#F1F5F9', borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  notificationBadge: { position: 'absolute', top: 12, right: 12, width: 10, height: 10, backgroundColor: '#EF4444', borderRadius: 5, borderWidth: 2, borderColor: '#FFF' },
-  avatarContainer: { width: 44, height: 44, borderRadius: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: '#FDE68A' },
+  logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logo: { width: 40, height: 40, backgroundColor: '#D97706', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  logoText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 },
+  logoSubtitle: { color: '#D97706', fontSize: 10, fontWeight: 'bold' },
+  logoTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  notificationButton: { padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12 },
+  notificationBadge: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, backgroundColor: '#EF4444', borderRadius: 4, borderWidth: 1, borderColor: '#FFF' },
+  avatarContainer: { width: 40, height: 40, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#FDE68A' },
   avatar: { width: '100%', height: '100%' },
-  profileCard: { backgroundColor: '#1E293B', borderRadius: 24, padding: 20 },
+  profileCard: { backgroundColor: '#1E293B', borderRadius: 24, padding: 16 },
   profileContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  shiftText: { fontSize: 11, color: '#94A3B8', fontWeight: 'bold', marginBottom: 4 },
-  driverName: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
-  idBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#64748B' },
+  shiftText: { fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' },
+  driverName: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginVertical: 4 },
+  idBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#64748B' },
   statusDotActive: { backgroundColor: '#22C55E' },
-  idText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
-  logoutButton: { backgroundColor: 'rgba(255,255,255,0.1)', width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  idText: { fontSize: 10, fontWeight: 'bold', color: '#FFFFFF' },
+  logoutButton: { backgroundColor: 'rgba(255,255,255,0.1)', padding: 12, borderRadius: 12 },
   mainContent: { padding: 20 },
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
-  gpsBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  gpsText: { fontSize: 11, color: '#D97706', fontWeight: '700' },
-  pulseDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#22C55E' },
-  attendanceCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+  section: { marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  sectionTitle: { fontSize: 12, fontWeight: 'bold', color: '#94A3B8' },
+  gpsBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  gpsText: { fontSize: 10, color: '#94A3B8' },
+  pulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
+  attendanceCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 15, elevation: 2 },
   attendanceContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  attendanceLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  attendanceIcon: { width: 56, height: 56, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  attendanceLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  attendanceIcon: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   attendanceIconActive: { backgroundColor: '#22C55E' },
   attendanceIconInactive: { backgroundColor: '#F1F5F9' },
-  attendanceStatus: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
-  attendanceTime: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  checkInButton: { paddingHorizontal: 18, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5 },
-  checkInButtonActive: { backgroundColor: '#D97706', borderColor: '#D97706' },
+  attendanceStatus: { fontSize: 16, fontWeight: 'bold' },
+  attendanceTime: { fontSize: 10, color: '#94A3B8' },
+  checkInButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
+  checkInButtonActive: { backgroundColor: '#D97706', borderColor: '#FBBF24' },
   checkOutButton: { backgroundColor: '#FFF', borderColor: '#FEE2E2' },
-  checkInButtonText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+  checkInButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
   checkOutButtonText: { color: '#DC2626' },
-  vehicleCard: { backgroundColor: '#FFFFFF', borderRadius: 28, padding: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
-  vehicleLabel: { fontSize: 12, color: '#D97706', fontWeight: '800', textTransform: 'uppercase' },
-  vehicleNumber: { fontSize: 36, fontWeight: '900', color: '#1E293B' },
-  vehicleStats: { alignItems: 'flex-end', gap: 8 },
-  batteryContainer: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  batteryText: { fontSize: 14, fontWeight: '800', color: '#1E293B' },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
-  statusText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
-  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statusButton: { flex: 1, minWidth: '45%', alignItems: 'center', paddingVertical: 14, borderRadius: 18, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#F1F5F9' },
+  vehicleCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, elevation: 2 },
+  vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  vehicleLabel: { fontSize: 10, color: '#D97706', fontWeight: 'bold' },
+  vehicleNumber: { fontSize: 32, fontWeight: 'bold', color: '#1E293B' },
+  vehicleStats: { alignItems: 'flex-end', gap: 5 },
+  batteryContainer: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F8FAFC', padding: 5, borderRadius: 8 },
+  batteryText: { fontSize: 12, fontWeight: 'bold' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  statusText: { fontSize: 10, fontWeight: 'bold' },
+  statusGrid: { flexDirection: 'row', gap: 10 },
+  statusButton: { flex: 1, alignItems: 'center', padding: 10, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#F1F5F9' },
   statusButtonActive: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-  statusButtonDisabled: { opacity: 0.4 },
-  statusButtonText: { fontSize: 12, color: '#94A3B8', marginTop: 8, fontWeight: '600' },
-  statusButtonTextActive: { color: '#D97706', fontWeight: '800' },
-  actionGrid: { flexDirection: 'row', gap: 16 },
-  actionCard: { flex: 1, backgroundColor: '#FFF', padding: 20, borderRadius: 24, alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  actionIcon: { width: 52, height: 52, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  statusButtonDisabled: { opacity: 0.5 },
+  statusButtonText: { fontSize: 10, color: '#94A3B8', marginTop: 5 },
+  statusButtonTextActive: { color: '#D97706', fontWeight: 'bold' },
+  actionGrid: { flexDirection: 'row', gap: 15 },
+  actionCard: { flex: 1, backgroundColor: '#FFF', padding: 15, borderRadius: 20, alignItems: 'center', elevation: 2 },
+  actionIcon: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
   reportIcon: { backgroundColor: '#FEE2E2' },
   photoIcon: { backgroundColor: '#FEF3C7' },
-  actionTitle: { fontSize: 13, fontWeight: '800', color: '#1E293B' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'center', padding: 24 },
-  modalContent: { backgroundColor: '#FFF', borderRadius: 32, padding: 24 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
+  actionTitle: { fontSize: 12, fontWeight: 'bold', color: '#1E293B' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#FFF', borderRadius: 24, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold' },
   stepContent: { alignItems: 'center' },
-  faceAuthContainer: { width: 120, height: 120, borderRadius: 30, backgroundColor: '#FFFBEB', borderStyle: 'dashed', borderWidth: 2, borderColor: '#D97706', justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
-  authButton: { backgroundColor: '#D97706', width: '100%', paddingVertical: 16, borderRadius: 16, alignItems: 'center' },
-  authButtonText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
-  batteryTextInput: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, height: 120, marginBottom: 24, textAlignVertical: 'top', color: '#1E293B', fontSize: 15 },
-  finishButton: { backgroundColor: '#1E293B', width: '100%', padding: 18, borderRadius: 16, alignItems: 'center' },
-  finishButtonText: { color: '#FFF', fontWeight: '800', fontSize: 16 }
+  faceAuthContainer: { width: 100, height: 100, borderRadius: 20, backgroundColor: '#F8FAFC', borderStyle: 'dashed', borderWidth: 2, borderColor: '#D97706', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  authButton: { backgroundColor: '#D97706', paddingHorizontal: 40, paddingVertical: 12, borderRadius: 12 },
+  authButtonText: { color: '#FFF', fontWeight: 'bold' },
+  batteryTextInput: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 15, height: 100, marginBottom: 20 },
+  finishButton: { backgroundColor: '#1E293B', width: '100%', padding: 15, borderRadius: 12, alignItems: 'center' },
+  finishButtonText: { color: '#FFF', fontWeight: 'bold' },
+  mantraFooter: { alignItems: 'center', marginTop: 20 },
+  mantraText: { fontSize: 8, color: '#94A3B8', letterSpacing: 1 }
 });
 
 export default HomeScreen;

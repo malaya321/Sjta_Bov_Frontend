@@ -69,7 +69,7 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
   if (status === 'success') {
     return (
       <SafeAreaView style={styles.successContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#bd9292ff" />
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <ScrollView contentContainerStyle={styles.successScrollContainer}>
           <View style={styles.successContent}>
             <View style={styles.successIconContainer}>
@@ -114,9 +114,9 @@ const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
         {/* Consistent Amber/Brown Gradient Overlay */}
         <LinearGradient
           colors={[
-            'rgba(120, 53, 15, 0.85)', // #78350f with 85% opacity
-            'rgba(120, 53, 15, 0.80)', // #78350f with 80% opacity
-            'rgba(120, 53, 15, 0.90)'  // #78350f with 90% opacity at bottom
+            'rgba(123, 51, 12, 0.85)', // #78350f with 85% opacity
+            'rgba(56, 28, 11, 0.8)', // #78350f with 80% opacity
+            'rgba(35, 16, 5, 0.9)'  // #78350f with 90% opacity at bottom
           ]}
           locations={[0, 0.5, 1]}
           style={StyleSheet.absoluteFillObject}
