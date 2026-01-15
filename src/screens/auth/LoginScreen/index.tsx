@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   SafeAreaView,
   View,
+  Image,
   Text,
   TextInput,
   TouchableOpacity,
@@ -46,19 +47,19 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
     }
 
     setStatus('loading');
-    
+
     // Simulate API Call
     setTimeout(() => {
       const uid = credentials.userId.toLowerCase();
-      
+
       if (uid === '1234' && credentials.password === '1234') {
         setRole('driver');
         setStatus('success');
-      } 
+      }
       else if (uid === '9999' && credentials.password === '9999') {
         setRole('supervisor');
         setStatus('success');
-      } 
+      }
       else {
         setStatus('error');
         setErrorMessage('Incorrect User ID or Password');
@@ -79,20 +80,20 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
                 <ShieldCheck size={48} color="#d97706" />
               </View>
             </View>
-            
+
             <Text style={styles.successTitle}>Jai Jagannath</Text>
             <Text style={styles.successSubtitle}>
-              Welcome, <Text style={styles.successBold}>{role === 'driver' ? 'Rajesh Kumar' : 'Admin Supervisor'}</Text>. 
+              Welcome, <Text style={styles.successBold}>{role === 'driver' ? 'Rajesh Kumar' : 'Admin Supervisor'}</Text>.
               Your session is being prepared.
             </Text>
-            
+
             <View style={styles.successProgressContainer}>
               <View style={styles.successProgressBar}>
                 <View style={[styles.successProgressFill, { width: '100%' }]} />
               </View>
-              
-              <TouchableOpacity 
-                style={styles.successButton} 
+
+              <TouchableOpacity
+                style={styles.successButton}
                 onPress={() => role && onLogin(role)}
               >
                 <Text style={styles.successButtonText}>Open Dashboard</Text>
@@ -112,99 +113,112 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <LinearGradient
-          colors={['rgba(120, 20, 15, 0.85)', 'rgba(56, 28, 11, 0.8)', 'rgba(94, 1, 1, 0.9)']}
-          style={StyleSheet.absoluteFillObject}
-        />
-        
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+        <ImageBackground
+          source={require('../../../assets/image/main_background2.png')}
+          style={styles.backgroundCircle}
+          resizeMode="cover"
         >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
+          <LinearGradient
+            colors={['rgba(120, 20, 15, 0.85)', 'rgba(56, 28, 11, 0.8)', 'rgba(94, 1, 1, 0.9)']}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardView}
           >
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <View style={styles.logo}><Text style={styles.logoText}>S</Text></View>
-                <View style={styles.logoTextContainer}>
-                  <Text style={styles.logoTitle}>SJTA</Text>
-                  <Text style={styles.logoSubtitle}>BOV ADMINISTRATION</Text>
+            <ScrollView
+              contentContainerStyle={styles.scrollContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                  <View style={styles.logo}>
+                    {/* <Text style={styles.logoText}>S</Text> */}
+                    <Image
+                      source={require('../../../assets/image/purilogo.png')}
+                      style={styles.logoImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={styles.logoTextContainer}>
+                    <Text style={styles.logoTitle}>SJTA</Text>
+                    <Text style={styles.logoSubtitle}>BOV ADMINISTRATION</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.languageSelector}><Text style={styles.languageText}>ODIA / EN</Text></View>
-            </View>
-
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>Shree Jagannath{'\n'}<Text style={styles.titleHighlight}>Temple Administration</Text></Text>
-              <Text style={styles.subtitle}>Enter credentials to start your divine service.</Text>
-            </View>
-
-            <View style={styles.formContainer}>
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIcon}><Smartphone size={18} color="rgba(255,255,255,0.5)" /></View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="User ID / Mobile"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={credentials.userId}
-                  onChangeText={(text) => handleChange('userId', text)}
-                  autoCapitalize="none"
-                />
+                <View style={styles.languageSelector}><Text style={styles.languageText}>ODIA / EN</Text></View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIcon}><Lock size={18} color="rgba(255,255,255,0.5)" /></View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  value={credentials.password}
-                  onChangeText={(text) => handleChange('password', text)}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  {showPassword ? <EyeOff size={20} color="rgba(255,255,255,0.3)" /> : <Eye size={20} color="rgba(255,255,255,0.3)" />}
+              <View style={styles.titleContainer}>
+                <Text style={styles.title}>Shreejjj Jagannath{'\n'}<Text style={styles.titleHighlight}>Temple Administration</Text></Text>
+                <Text style={styles.subtitle}>Enter credentialss to start your divine service.</Text>
+              </View>
+
+              <View style={styles.formContainer}>
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}><Smartphone size={18} color="rgba(255,255,255,0.5)" /></View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="User ID / Mobile"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={credentials.userId}
+                    onChangeText={(text) => handleChange('userId', text)}
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputIcon}><Lock size={18} color="rgba(255,255,255,0.5)" /></View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={credentials.password}
+                    onChangeText={(text) => handleChange('password', text)}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff size={20} color="rgba(255,255,255,0.3)" /> : <Eye size={20} color="rgba(255,255,255,0.3)" />}
+                  </TouchableOpacity>
+                </View>
+
+                {errorMessage ? (
+                  <View style={styles.errorContainer}>
+                    <AlertCircle size={16} color="#fecaca" />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[styles.loginButton, status === 'loading' && styles.loginButtonDisabled]}
+                  onPress={handleLogin}
+                  disabled={status === 'loading'}
+                >
+                  {status === 'loading' ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <>
+                      <Text style={styles.loginButtonText}>SIGN IN</Text>
+                      <ArrowRight size={20} color="#ffffff" />
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
 
-              {errorMessage ? (
-                <View style={styles.errorContainer}>
-                  <AlertCircle size={16} color="#fecaca" />
-                  <Text style={styles.errorText}>{errorMessage}</Text>
-                </View>
-              ) : null}
-
-              <TouchableOpacity
-                style={[styles.loginButton, status === 'loading' && styles.loginButtonDisabled]}
-                onPress={handleLogin}
-                disabled={status === 'loading'}
-              >
-                {status === 'loading' ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <>
-                    <Text style={styles.loginButtonText}>SIGN IN</Text>
-                    <ArrowRight size={20} color="#ffffff" />
-                  </>
-                )}
+              <TouchableOpacity style={styles.forgotPasswordContainer}>
+                <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
 
-            <TouchableOpacity style={styles.forgotPasswordContainer}>
-              <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          <View style={styles.bottomContainer}>
-            <Text style={styles.bottomTitle}>JAGANNATHA SWAMI NAYANA PATHA GAMI BHAVA TUME</Text>
-            <View style={styles.bottomFeatures}>
-              <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>SECURE</Text></View>
-              <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>TRACKED</Text></View>
+            <View style={styles.bottomContainer}>
+              <Text style={styles.bottomTitle}>JAGANNATHA SWAMI NAYANA PATHA GAMI BHAVA TUME</Text>
+              <View style={styles.bottomFeatures}>
+                <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>SECURE</Text></View>
+                <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>TRACKED</Text></View>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </ImageBackground>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -212,12 +226,14 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#78140f' },
+  logoImage: { width: '100%', height: '100%' },
+  // backgroundCircle:{height:'100%'},
   keyboardView: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   scrollContainer: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 120 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 48, height: 48, backgroundColor: '#d97706', borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  logo: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 8 },
   logoText: { color: '#ffffff', fontWeight: '900', fontSize: 20 },
   logoTextContainer: { gap: 2 },
   logoTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
@@ -239,7 +255,7 @@ const styles = StyleSheet.create({
   loginButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 30 },
   forgotPasswordText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold' },
-  bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0.95)', padding: 24, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0 },
+  bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0.95)', padding: 10, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0, },
   bottomTitle: { color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: '900', marginBottom: 10 },
   bottomFeatures: { flexDirection: 'row', gap: 20 },
   featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
