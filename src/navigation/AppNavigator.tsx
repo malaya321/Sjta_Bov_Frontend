@@ -1,17 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, StatusBar, TouchableOpacity, Platform, Text } from 'react-native';
-import { Power, MapPin, Bell, Settings, RotateCcw } from 'lucide-react-native';
+import { View, StyleSheet, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { 
+  Power, 
+  MapPin, 
+  Bell, 
+  Settings, 
+  RotateCcw, 
+  LayoutDashboard, 
+  Users, 
+  ClipboardList 
+} from 'lucide-react-native';
 
 // Import your screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
+import SupervisorScreen from '../screens/SupervisorScreen'; // Make sure to create this file
 
 // Types
 export type RootStackParamList = {
   LoginScreen: undefined;
   MainTabs: undefined;
+  SupervisorStack: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -33,7 +44,7 @@ const CentralButton = ({ children, onPress }: any) => (
 );
 
 /**
- * Bottom Tab Navigator Configuration
+ * Bottom Tab Navigator for DRIVERS
  */
 const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
   return (
@@ -56,7 +67,7 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
       />
       <Tab.Screen 
         name="Zone" 
-        component={View} // Placeholder for Zone Screen
+        component={View} 
         options={{
           tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
         }}
@@ -75,16 +86,56 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
       />
       <Tab.Screen 
         name="Alerts" 
-        component={View} // Placeholder for Alerts Screen
+        component={View} 
         options={{
           tabBarIcon: ({ color }) => <Bell size={22} color={color} />,
         }}
       />
       <Tab.Screen 
         name="More" 
-        component={View} // Placeholder for Settings Screen
+        component={View} 
         options={{
           tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+/**
+ * Bottom Tab Navigator for SUPERVISORS (Optional: if they also need tabs)
+ * If they only need one screen, you can skip this and point directly to SupervisorScreen
+ */
+const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: navStyles.tabBar,
+        tabBarActiveTintColor: '#D97706',
+        tabBarInactiveTintColor: '#CBD5E1',
+        tabBarLabelStyle: navStyles.tabBarLabel,
+      }}
+    >
+      <Tab.Screen 
+        name="Roster" 
+        children={() => <SupervisorScreen onLogout={onLogout} />}
+        options={{
+          tabBarIcon: ({ color }) => <ClipboardList size={22} color={color} />,
+        }}
+      />
+      <Tab.Screen 
+        name="Drivers" 
+        component={View} 
+        options={{
+          tabBarIcon: ({ color }) => <Users size={22} color={color} />,
+        }}
+      />
+      <Tab.Screen 
+        name="Status" 
+        component={View} 
+        options={{
+          tabBarIcon: ({ color }) => <LayoutDashboard size={22} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -95,22 +146,43 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
  * Main App Navigator with Auth Logic
  */
 const AppNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  // role can be 'driver', 'supervisor', or null
+  const [auth, setAuth] = useState<{ isLoggedIn: boolean; role: 'driver' | 'supervisor' | null }>({
+    isLoggedIn: false,
+    role: null,
+  });
 
-  const handleLogin = () => setIsAuthenticated(true);
-  const handleLogout = () => setIsAuthenticated(false);
+  const handleLogin = (role: 'driver' | 'supervisor') => {
+    setAuth({ isLoggedIn: true, role });
+  };
+
+  const handleLogout = () => {
+    setAuth({ isLoggedIn: false, role: null });
+  };
 
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="MainTabs">
-            {() => <TabNavigator onLogout={handleLogout} />}
+        {!auth.isLoggedIn ? (
+          // Login Flow
+          <Stack.Screen name="LoginScreen">
+            {(props) => (
+              <LoginScreen 
+                {...(props as any)} 
+                onLogin={(role: 'driver' | 'supervisor') => handleLogin(role)} 
+              />
+            )}
+          </Stack.Screen>
+        ) : auth.role === 'supervisor' ? (
+          // Supervisor Flow
+          <Stack.Screen name="SupervisorStack">
+            {() => <SupervisorTabNavigator onLogout={handleLogout} />}
           </Stack.Screen>
         ) : (
-          <Stack.Screen name="LoginScreen">
-            {(props) => <LoginScreen {...(props as any)} onLogin={handleLogin} />}
+          // Driver Flow
+          <Stack.Screen name="MainTabs">
+            {() => <TabNavigator onLogout={handleLogout} />}
           </Stack.Screen>
         )}
       </Stack.Navigator>
