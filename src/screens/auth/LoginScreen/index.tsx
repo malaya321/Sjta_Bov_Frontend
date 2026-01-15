@@ -227,7 +227,7 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#78140f' },
   logoImage: { width: '100%', height: '100%' },
-  // backgroundCircle:{height:'100%'},
+  backgroundCircle:{height:'100%'},
   keyboardView: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   scrollContainer: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 120 },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   loginButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 30 },
   forgotPasswordText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold' },
-  bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0.95)', padding: 10, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0, },
+  bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0)', padding: 10, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0, },
   bottomTitle: { color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: '900', marginBottom: 10 },
   bottomFeatures: { flexDirection: 'row', gap: 20 },
   featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
