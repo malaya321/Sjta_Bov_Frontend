@@ -28,7 +28,11 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => void }) => {
+const LoginScreen = ({
+  onLogin,
+}: {
+  onLogin: (role: 'driver' | 'supervisor') => void;
+}) => {
   const [credentials, setCredentials] = useState({ userId: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
@@ -55,12 +59,10 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
       if (uid === '1234' && credentials.password === '1234') {
         setRole('driver');
         setStatus('success');
-      }
-      else if (uid === '9999' && credentials.password === '9999') {
+      } else if (uid === '9999' && credentials.password === '9999') {
         setRole('supervisor');
         setStatus('success');
-      }
-      else {
+      } else {
         setStatus('error');
         setErrorMessage('Incorrect User ID or Password');
       }
@@ -83,8 +85,11 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
 
             <Text style={styles.successTitle}>Jai Jagannath</Text>
             <Text style={styles.successSubtitle}>
-              Welcome, <Text style={styles.successBold}>{role === 'driver' ? 'Rajesh Kumar' : 'Admin Supervisor'}</Text>.
-              Your session is being prepared.
+              Welcome,{' '}
+              <Text style={styles.successBold}>
+                {role === 'driver' ? 'Rajesh Kumar' : 'Admin Supervisor'}
+              </Text>
+              . Your session is being prepared.
             </Text>
 
             <View style={styles.successProgressContainer}>
@@ -107,9 +112,15 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#78350f" translucent={true} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#78350f"
+        translucent={true}
+      />
       <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1621244249243-437b49c5aad9?q=80&w=2070&auto=format&fit=crop' }}
+        source={{
+          uri: 'https://images.unsplash.com/photo-1621244249243-437b49c5aad9?q=80&w=2070&auto=format&fit=crop',
+        }}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -146,39 +157,58 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
                     <Text style={styles.logoSubtitle}>BOV ADMINISTRATION</Text>
                   </View>
                 </View>
-                <View style={styles.languageSelector}><Text style={styles.languageText}>ODIA / EN</Text></View>
+                <View style={styles.languageSelector}>
+                  <Text style={styles.languageText}>ODIA / EN</Text>
+                </View>
               </View>
 
               <View style={styles.titleContainer}>
-                <Text style={styles.title}>Shree Jagannath{'\n'}<Text style={styles.titleHighlight}>Temple Administration</Text></Text>
-                <Text style={styles.subtitle}>Enter credentials to start your divine service.</Text>
+                <Text style={styles.title}>
+                  Shree Jagannath{'\n'}
+                  <Text style={styles.titleHighlight}>
+                    Temple Administration
+                  </Text>
+                </Text>
+                <Text style={styles.subtitle}>
+                  Enter credentials to start your divine service.
+                </Text>
               </View>
 
               <View style={styles.formContainer}>
                 <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}><Smartphone size={18} color="rgba(255,255,255,0.5)" /></View>
+                  <View style={styles.inputIcon}>
+                    <Smartphone size={18} color="rgba(255,255,255,0.5)" />
+                  </View>
                   <TextInput
                     style={styles.input}
                     placeholder="User ID / Mobile"
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={credentials.userId}
-                    onChangeText={(text) => handleChange('userId', text)}
+                    onChangeText={text => handleChange('userId', text)}
                     autoCapitalize="none"
                   />
                 </View>
 
                 <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}><Lock size={18} color="rgba(255,255,255,0.5)" /></View>
+                  <View style={styles.inputIcon}>
+                    <Lock size={18} color="rgba(255,255,255,0.5)" />
+                  </View>
                   <TextInput
                     style={styles.input}
                     placeholder="Password"
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={credentials.password}
-                    onChangeText={(text) => handleChange('password', text)}
+                    onChangeText={text => handleChange('password', text)}
                     secureTextEntry={!showPassword}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <EyeOff size={20} color="rgba(255,255,255,0.3)" /> : <Eye size={20} color="rgba(255,255,255,0.3)" />}
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color="rgba(255,255,255,0.3)" />
+                    ) : (
+                      <Eye size={20} color="rgba(255,255,255,0.3)" />
+                    )}
                   </TouchableOpacity>
                 </View>
 
@@ -190,7 +220,10 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
                 ) : null}
 
                 <TouchableOpacity
-                  style={[styles.loginButton, status === 'loading' && styles.loginButtonDisabled]}
+                  style={[
+                    styles.loginButton,
+                    status === 'loading' && styles.loginButtonDisabled,
+                  ]}
                   onPress={handleLogin}
                   disabled={status === 'loading'}
                 >
@@ -211,10 +244,18 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
             </ScrollView>
 
             <View style={styles.bottomContainer}>
-              <Text style={styles.bottomTitle}>JAGANNATHA SWAMI NAYANA PATHA GAMI BHAVA TUME</Text>
+              <Text style={styles.bottomTitle}>
+                JAGANNATHA SWAMI NAYANA PATHA GAMI BHAVA TUME
+              </Text>
               <View style={styles.bottomFeatures}>
-                <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>SECURE</Text></View>
-                <View style={styles.featureItem}><View style={styles.featureDot} /><Text style={styles.featureText}>TRACKED</Text></View>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureDot} />
+                  <Text style={styles.featureText}>SECURE</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureDot} />
+                  <Text style={styles.featureText}>TRACKED</Text>
+                </View>
               </View>
             </View>
           </KeyboardAvoidingView>
@@ -225,56 +266,179 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#78140f' },
+  container: { flex: 1, backgroundColor: '#5d0e0aff' },
   logoImage: { width: '100%', height: '100%' },
-  backgroundCircle:{height:'100%'},
+  backgroundCircle: { height: '100%' },
   keyboardView: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  scrollContainer: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 120 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60 },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 120,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'ios' ? 60 : 100,
+  },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 55, height: 55, borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  logo: {
+    width: 55,
+    height: 55,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+  },
   logoText: { color: '#ffffff', fontWeight: '900', fontSize: 20 },
   logoTextContainer: { gap: 2 },
   logoTitle: { color: '#ffffff', fontSize: 30, fontWeight: '900' },
-  logoSubtitle: { color: '#fbbf24', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
-  languageSelector: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
+  logoSubtitle: {
+    color: '#fbbf24',
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  languageSelector: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+  },
   languageText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   titleContainer: { marginBottom: 40 },
   title: { color: '#ffffff', fontSize: 28, fontWeight: '900', lineHeight: 38 },
   titleHighlight: { color: '#d97706' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 12,fontWeight:600 },
+  subtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    marginTop: 12,
+    fontWeight: 600,
+  },
   formContainer: { gap: 20 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.34)', borderRadius: 30, paddingHorizontal: 20, height: 56, },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.34)',
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    height: 56,
+  },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#ffffff', fontSize: 16,fontWeight:600, },
-  errorContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: 12, borderRadius: 20 },
+  input: { flex: 1, color: '#ffffff', fontSize: 16, fontWeight: 600 },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    padding: 12,
+    borderRadius: 20,
+  },
   errorText: { color: '#fecaca', fontSize: 12, fontWeight: 'bold' },
-  loginButton: { backgroundColor: '#d97706', borderRadius: 30, height: 56, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 12, marginTop: 8, elevation: 8 },
+  loginButton: {
+    backgroundColor: '#d97706',
+    borderRadius: 30,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+    elevation: 8,
+  },
   loginButtonDisabled: { opacity: 0.5 },
   loginButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 30 },
-  forgotPasswordText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold' },
-  bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0)', padding: 10, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0, },
-  bottomTitle: { color: 'rgba(255, 255, 255, 0.43)', fontSize: 10, fontWeight: '900', marginBottom: 10,letterSpacing:.8, },
+  forgotPasswordText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  bottomContainer: {
+    // backgroundColor: 'rgba(120, 15, 15, 0)',
+    // padding: 10,
+    // borderTopLeftRadius: 32,
+    // borderTopRightRadius: 32,
+    alignItems: 'center',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomTitle: {
+    color: 'rgba(255, 255, 255, 0.43)',
+    fontSize: 10,
+    fontWeight: '900',
+    marginBottom: 10,
+    letterSpacing: 0.8,
+  },
   bottomFeatures: { flexDirection: 'row', gap: 20 },
   featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  featureDot: { width: 4, height: 4, backgroundColor: '#d97706', borderRadius: 2 },
+  featureDot: {
+    width: 4,
+    height: 4,
+    backgroundColor: '#d97706',
+    borderRadius: 2,
+  },
   featureText: { color: '#ffffff', fontSize: 8, fontWeight: 'bold' },
   // Success Screen
   successContainer: { flex: 1, backgroundColor: '#ffffff' },
-  successScrollContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  successScrollContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
   successContent: { alignItems: 'center', width: '100%' },
   successIconContainer: { marginBottom: 32 },
-  successIconGlow: { position: 'absolute', width: 100, height: 100, backgroundColor: '#d97706', borderRadius: 50, opacity: 0.2, top: -2, left: -2 },
-  successIcon: { width: 96, height: 96, backgroundColor: '#fffbeb', borderRadius: 48, justifyContent: 'center', alignItems: 'center', elevation: 10 },
+  successIconGlow: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    backgroundColor: '#d97706',
+    borderRadius: 50,
+    opacity: 0.2,
+    top: -2,
+    left: -2,
+  },
+  successIcon: {
+    width: 96,
+    height: 96,
+    backgroundColor: '#fffbeb',
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 10,
+  },
   successTitle: { fontSize: 32, fontWeight: 'bold', color: '#1e293b' },
-  successSubtitle: { fontSize: 14, color: '#64748b', textAlign: 'center', marginVertical: 16 },
+  successSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
   successBold: { fontWeight: 'bold', color: '#1e293b' },
   successProgressContainer: { width: '100%', gap: 20 },
-  successProgressBar: { height: 6, backgroundColor: '#f1f5f9', borderRadius: 3 },
-  successProgressFill: { height: '100%', backgroundColor: '#d97706', borderRadius: 3 },
-  successButton: { backgroundColor: '#1e293b', borderRadius: 24, height: 56, justifyContent: 'center', alignItems: 'center' },
+  successProgressBar: {
+    height: 6,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 3,
+  },
+  successProgressFill: {
+    height: '100%',
+    backgroundColor: '#d97706',
+    borderRadius: 3,
+  },
+  successButton: {
+    backgroundColor: '#1e293b',
+    borderRadius: 24,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   successButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
 });
 

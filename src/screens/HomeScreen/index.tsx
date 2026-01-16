@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 import {
   User,
@@ -21,14 +22,21 @@ import {
   MapPin,
   AlertTriangle,
   CheckCircle2,
-  Car,
   RotateCcw,
   Camera,
   LogOut,
   Navigation as NavIcon,
   X,
-  ShieldCheck,
+  Shield,
+  BatteryCharging,
+  Car,
+  Wifi,
+  Settings,
 } from 'lucide-react-native';
+
+const { width, height } = Dimensions.get('window');
+const isIOS = Platform.OS === 'ios';
+const isSmallDevice = width < 375;
 
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
@@ -44,15 +52,15 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     id: "D-1024",
     shift: "Shift A (08:30 AM - 04:30 PM)",
     assignedVehicle: "BOV-402",
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rajesh'
   };
 
   const statusColors: any = {
-    'Running': { bg: '#DCFCE7', text: '#15803D', border: '#BBF7D0' },
-    'Charging': { bg: '#FEF3C7', text: '#D97706', border: '#FDE68A' },
-    'Cleaning': { bg: '#DBEAFE', text: '#1D4ED8', border: '#BFDBFE' },
-    'Fault': { bg: '#FEE2E2', text: '#DC2626', border: '#FECACA' },
-    'Idle': { bg: '#F1F5F9', text: '#64748B', border: '#E2E8F0' }
+    'Running': { bg: '#DCFCE7', text: '#15803D', icon: '#22C55E' },
+    'Charging': { bg: '#FEF3C7', text: '#D97706', icon: '#F59E0B' },
+    'Cleaning': { bg: '#DBEAFE', text: '#1D4ED8', icon: '#3B82F6' },
+    'Fault': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
+    'Idle': { bg: '#F1F5F9', text: '#64748B', icon: '#94A3B8' }
   };
 
   const handleCheckInFlow = () => {
@@ -60,10 +68,27 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
       setShowAuthModal(true);
       setAuthStep(1);
     } else {
-      Alert.alert('Check Out', 'Are you sure you want to check out?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Check Out', onPress: () => { setIsCheckedIn(false); setVehicleStatus('Idle'); } }
-      ]);
+      Alert.alert(
+        'Check Out',
+        'Are you sure you want to check out?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Cancel Pressed')
+          },
+          {
+            text: 'Check Out',
+            style: 'destructive',
+            onPress: () => {
+              setIsCheckedIn(false);
+              setVehicleStatus('Idle');
+              Alert.alert('Success', 'You have successfully checked out!');
+            }
+          }
+        ],
+        { cancelable: true }
+      );
     }
   };
 
@@ -75,41 +100,92 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
       setIsCheckedIn(true);
       setVehicleStatus('Running');
       setBatteryText('');
+      Alert.alert('Success', 'You have successfully checked in!');
+    }
+  };
+
+  const handleStatusChange = (status: string) => {
+    if (isCheckedIn) {
+      setVehicleStatus(status);
+      Alert.alert(
+        'Status Updated',
+        `Vehicle status changed to ${status}`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const renderStatusIcon = (status: string, isActive: boolean) => {
+    const iconColor = isActive ? statusColors[status]?.icon || '#D97706' : '#94A3B8';
+    const iconSize = isSmallDevice ? 16 : 20;
+
+    switch (status) {
+      case 'Running':
+        return <NavIcon size={iconSize} color={iconColor} />;
+      case 'Charging':
+        return <BatteryCharging size={iconSize} color={iconColor} />;
+      case 'Cleaning':
+        return <CheckCircle2 size={iconSize} color={iconColor} />;
+      case 'Fault':
+        return <AlertTriangle size={iconSize} color={iconColor} />;
+      default:
+        return <Car size={iconSize} color={iconColor} />;
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-      <ScrollView 
+      <StatusBar
+        barStyle={isIOS ? "dark-content" : "light-content"}
+        backgroundColor={isIOS ? "#5d0e0aff" : "#5d0e0aff"}
+      />
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={isIOS}
       >
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.logoContainer}>
-              <View style={styles.logo}><Text style={styles.logoText}>S</Text></View>
+              <View style={styles.logo}>
+                <Text style={styles.logoText}>J</Text>
+              </View>
               <View>
                 <Text style={styles.logoSubtitle}>SJTA Driver App</Text>
                 <Text style={styles.logoTitle}>Jai Jagannath</Text>
               </View>
             </View>
             <View style={styles.headerIcons}>
-              <TouchableOpacity style={styles.notificationButton} onPress={() => setHasNotifications(false)}>
-                <Bell size={20} color="#94A3B8" />
+              <TouchableOpacity
+                style={[styles.notificationButton, isIOS && styles.iosShadow]}
+                onPress={() => {
+                  setHasNotifications(false);
+                  Alert.alert('Notifications', 'No new notifications');
+                }}
+                activeOpacity={0.7}
+              >
+                <Bell size={isSmallDevice ? 18 : 20} color="#94A3B8" />
                 {hasNotifications && <View style={styles.notificationBadge} />}
               </TouchableOpacity>
-              <View style={styles.avatarContainer}>
-                <Image source={{ uri: driverData.avatarUrl }} style={styles.avatar} />
-              </View>
+              <TouchableOpacity
+                style={[styles.avatarContainer, isIOS && styles.iosShadow]}
+                onPress={() => Alert.alert('Profile', 'View profile details')}
+                activeOpacity={0.7}
+              >
+                {/* <Image 
+                  source={{ uri: driverData.avatarUrl }} 
+                  style={styles.avatar}
+                  defaultSource={require('./assets/default-avatar.png')}
+                /> */}
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.profileCard}>
+          <View style={[styles.profileCard, isIOS && styles.iosShadow]}>
             <View style={styles.profileContent}>
-              <View>
+              <View style={styles.profileInfo}>
                 <Text style={styles.shiftText}>{driverData.shift}</Text>
                 <Text style={styles.driverName}>{driverData.name}</Text>
                 <View style={styles.idBadge}>
@@ -117,8 +193,21 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                   <Text style={styles.idText}>ID: {driverData.id} • {isCheckedIn ? 'ONLINE' : 'OFFLINE'}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
-                <LogOut size={22} color="#FFFFFF" />
+              <TouchableOpacity
+                style={[styles.logoutButton, isIOS && styles.iosButton]}
+                onPress={() => {
+                  Alert.alert(
+                    'Logout',
+                    'Are you sure you want to logout?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Logout', onPress: onLogout }
+                    ]
+                  );
+                }}
+                activeOpacity={0.7}
+              >
+                <LogOut size={isSmallDevice ? 18 : 22} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -130,26 +219,47 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Shift Attendance</Text>
               <View style={styles.gpsBadge}>
-                <MapPin size={10} color="#D97706" />
+                <MapPin size={isSmallDevice ? 9 : 10} color="#D97706" />
                 <Text style={styles.gpsText}>GPS Recorded</Text>
               </View>
             </View>
-            <View style={styles.attendanceCard}>
+            <View style={[styles.attendanceCard, isIOS && styles.iosShadow]}>
               <View style={styles.attendanceContent}>
                 <View style={styles.attendanceLeft}>
-                  <View style={[styles.attendanceIcon, isCheckedIn ? styles.attendanceIconActive : styles.attendanceIconInactive]}>
-                    {isCheckedIn ? <CheckCircle2 size={32} color="#FFFFFF" /> : <Power size={32} color="#CBD5E1" />}
+                  <View style={[
+                    styles.attendanceIcon,
+                    isCheckedIn ? styles.attendanceIconActive : styles.attendanceIconInactive,
+                    isIOS && styles.iosButton
+                  ]}>
+                    {isCheckedIn ? (
+                      <CheckCircle2 size={isSmallDevice ? 28 : 32} color="#FFFFFF" />
+                    ) : (
+                      <Power size={isSmallDevice ? 28 : 32} color="#CBD5E1" />
+                    )}
                   </View>
                   <View>
-                    <Text style={styles.attendanceStatus}>{isCheckedIn ? 'Shift Active' : 'Off-Duty'}</Text>
-                    <Text style={styles.attendanceTime}>{isCheckedIn ? 'Check-in: 08:30 AM' : 'Check-in Required'}</Text>
+                    <Text style={styles.attendanceStatus}>
+                      {isCheckedIn ? 'Shift Active' : 'Off-Duty'}
+                    </Text>
+                    <Text style={styles.attendanceTime}>
+                      {isCheckedIn ? 'Check-in: 08:30 AM' : 'Check-in Required'}
+                    </Text>
                   </View>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.checkInButton, isCheckedIn ? styles.checkOutButton : styles.checkInButtonActive]}
+                <TouchableOpacity
+                  style={[
+                    styles.checkInButton,
+                    isCheckedIn ? styles.checkOutButton : styles.checkInButtonActive,
+                    isIOS && styles.iosButton,
+                    !isCheckedIn && isIOS && styles.iosPrimaryButton
+                  ]}
                   onPress={handleCheckInFlow}
+                  activeOpacity={0.7}
                 >
-                  <Text style={[styles.checkInButtonText, isCheckedIn && styles.checkOutButtonText]}>
+                  <Text style={[
+                    styles.checkInButtonText,
+                    isCheckedIn && styles.checkOutButtonText
+                  ]}>
                     {isCheckedIn ? 'CHECK OUT' : 'CHECK IN'}
                   </Text>
                 </TouchableOpacity>
@@ -161,9 +271,14 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
-              {isCheckedIn && <View style={styles.pulseDot} />}
+              {isCheckedIn && (
+                <View style={styles.connectionStatus}>
+                  <Wifi size={isSmallDevice ? 10 : 12} color="#22C55E" />
+                  <View style={styles.pulseDot} />
+                </View>
+              )}
             </View>
-            <View style={styles.vehicleCard}>
+            <View style={[styles.vehicleCard, isIOS && styles.iosShadow]}>
               <View style={styles.vehicleHeader}>
                 <View>
                   <Text style={styles.vehicleLabel}>Current BOV</Text>
@@ -171,159 +286,829 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 </View>
                 <View style={styles.vehicleStats}>
                   <View style={styles.batteryContainer}>
-                    <Battery size={18} color={batteryLevel < 20 ? '#DC2626' : '#22C55E'} />
-                    <Text style={styles.batteryText}>{batteryLevel}%</Text>
+                    <Battery size={isSmallDevice ? 16 : 18} color={batteryLevel < 20 ? '#DC2626' : batteryLevel < 50 ? '#F59E0B' : '#22C55E'} />
+                    <Text style={[
+                      styles.batteryText,
+                      batteryLevel < 20 && styles.lowBatteryText,
+                      batteryLevel < 50 && batteryLevel >= 20 && styles.mediumBatteryText
+                    ]}>
+                      {batteryLevel}%
+                    </Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: statusColors[vehicleStatus].bg, borderColor: statusColors[vehicleStatus].border }]}>
-                    <Text style={[styles.statusText, { color: statusColors[vehicleStatus].text }]}>{vehicleStatus}</Text>
+                  <View style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: statusColors[vehicleStatus].bg,
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.statusText,
+                      { color: statusColors[vehicleStatus].text }
+                    ]}>
+                      {vehicleStatus}
+                    </Text>
                   </View>
                 </View>
               </View>
+
               <View style={styles.statusGrid}>
                 {['Running', 'Charging', 'Cleaning', 'Fault'].map((status) => (
                   <TouchableOpacity
                     key={status}
                     disabled={!isCheckedIn}
-                    onPress={() => setVehicleStatus(status)}
-                    style={[styles.statusButton, vehicleStatus === status && styles.statusButtonActive, !isCheckedIn && styles.statusButtonDisabled]}
+                    onPress={() => handleStatusChange(status)}
+                    style={[
+                      styles.statusButton,
+                      vehicleStatus === status && styles.statusButtonActive,
+                      !isCheckedIn && styles.statusButtonDisabled,
+                      isIOS && styles.iosButton
+                    ]}
+                    activeOpacity={0.7}
                   >
-                    {status === 'Running' && <NavIcon size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Charging' && <RotateCcw size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Cleaning' && <CheckCircle2 size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    {status === 'Fault' && <AlertTriangle size={20} color={vehicleStatus === status ? '#D97706' : '#94A3B8'} />}
-                    <Text style={[styles.statusButtonText, vehicleStatus === status && styles.statusButtonTextActive]}>{status}</Text>
+                    {renderStatusIcon(status, vehicleStatus === status)}
+                    <Text style={[
+                      styles.statusButtonText,
+                      vehicleStatus === status && styles.statusButtonTextActive
+                    ]}>
+                      {status}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
           </View>
-          
-          {/* Action Grid */}
-          <View style={styles.actionGrid}>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, styles.reportIcon]}><AlertTriangle size={24} color="#DC2626" /></View>
-              <Text style={styles.actionTitle}>Report Fault</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCard}>
-              <View style={[styles.actionIcon, styles.photoIcon]}><Camera size={24} color="#D97706" /></View>
-              <Text style={styles.actionTitle}>Battery Photo</Text>
-            </TouchableOpacity>
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <TouchableOpacity>
+                <Settings size={isSmallDevice ? 14 : 16} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity
+                style={[styles.actionCard, isIOS && styles.iosShadow]}
+                onPress={() => Alert.alert('Report Fault', 'Fault reporting feature')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, styles.reportIcon]}>
+                  <AlertTriangle size={isSmallDevice ? 20 : 24} color="#DC2626" />
+                </View>
+                <Text style={styles.actionTitle}>Report Fault</Text>
+                <Text style={styles.actionSubtitle}>Vehicle issues</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionCard, isIOS && styles.iosShadow]}
+                onPress={() => Alert.alert('Battery Photo', 'Camera will open')}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.actionIcon, styles.photoIcon]}>
+                  <Camera size={isSmallDevice ? 20 : 24} color="#D97706" />
+                </View>
+                <Text style={styles.actionTitle}>Battery Photo</Text>
+                <Text style={styles.actionSubtitle}>Daily log</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Additional Info */}
+          <View style={[styles.infoCard, isIOS && styles.iosShadow]}>
+            <View style={styles.infoRow}>
+              <Shield size={isSmallDevice ? 16 : 18} color="#D97706" />
+              <Text style={styles.infoText}>Vehicle insured until Dec 2024</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <CheckCircle2 size={isSmallDevice ? 16 : 18} color="#22C55E" />
+              <Text style={styles.infoText}>Last service: 15 Nov 2024</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
 
       {/* Check-in Modal */}
-      <Modal visible={showAuthModal} transparent animationType="slide">
+      <Modal
+        visible={showAuthModal}
+        transparent
+        animationType={isIOS ? 'slide' : 'fade'}
+        statusBarTranslucent
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            isIOS ? styles.iosModal : styles.androidModal
+          ]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Verification Step {authStep}</Text>
-              <TouchableOpacity onPress={() => setShowAuthModal(false)}><X size={24} color="#94A3B8" /></TouchableOpacity>
+              <Text style={styles.modalTitle}>Verification Step {authStep}/2</Text>
+              <TouchableOpacity
+                onPress={() => setShowAuthModal(false)}
+                style={styles.closeButton}
+                activeOpacity={0.7}
+              >
+                <X size={isSmallDevice ? 20 : 24} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
+
             <View style={styles.stepContent}>
               {authStep === 1 ? (
                 <>
-                  <View style={styles.faceAuthContainer}><User size={60} color="#E2E8F0" /></View>
-                  <TouchableOpacity style={styles.authButton} onPress={nextAuthStep}><Text style={styles.authButtonText}>Verify Face</Text></TouchableOpacity>
+                  <View style={[
+                    styles.faceAuthContainer,
+                    isIOS && styles.iosBorder
+                  ]}>
+                    <User size={isSmallDevice ? 50 : 60} color="#E2E8F0" />
+                  </View>
+                  <Text style={styles.stepDescription}>
+                    Position your face within the frame
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.authButton,
+                      isIOS && styles.iosPrimaryButton
+                    ]}
+                    onPress={nextAuthStep}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.authButtonText}>Scan Face</Text>
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <TextInput 
-                    style={styles.batteryTextInput} 
-                    placeholder="Enter battery status remarks..." 
+                  <View style={styles.batteryHeader}>
+                    <Battery size={isSmallDevice ? 24 : 28} color="#D97706" />
+                    <Text style={styles.batteryModalTitle}>Battery Status</Text>
+                  </View>
+                  <TextInput
+                    style={[
+                      styles.batteryTextInput,
+                      isIOS && styles.iosInput
+                    ]}
+                    placeholder="Enter battery status remarks..."
+                    placeholderTextColor="#94A3B8"
                     onChangeText={setBatteryText}
                     multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
                   />
-                  <TouchableOpacity style={styles.finishButton} onPress={nextAuthStep}><Text style={styles.finishButtonText}>Complete</Text></TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.finishButton,
+                      isIOS && styles.iosButton
+                    ]}
+                    onPress={nextAuthStep}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.finishButtonText}>Complete Check-in</Text>
+                  </TouchableOpacity>
                 </>
               )}
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Footer Mantra */}
+      <View style={styles.footer}>
+        <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>
+        <Text style={styles.footerText}>SJTA Driver Portal v1.0.0</Text>
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: 100 },
-  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 20 : 10, paddingBottom: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 5 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 40, height: 40, backgroundColor: '#D97706', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  logoText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 },
-  logoSubtitle: { color: '#D97706', fontSize: 10, fontWeight: 'bold' },
-  logoTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
-  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  notificationButton: { padding: 10, backgroundColor: '#F8FAFC', borderRadius: 12 },
-  notificationBadge: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, backgroundColor: '#EF4444', borderRadius: 4, borderWidth: 1, borderColor: '#FFF' },
-  avatarContainer: { width: 40, height: 40, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#FDE68A' },
-  avatar: { width: '100%', height: '100%' },
-  profileCard: { backgroundColor: '#1E293B', borderRadius: 24, padding: 16 },
-  profileContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  shiftText: { fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 'bold' },
-  driverName: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginVertical: 4 },
-  idBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#64748B' },
-  statusDotActive: { backgroundColor: '#22C55E' },
-  idText: { fontSize: 10, fontWeight: 'bold', color: '#FFFFFF' },
-  logoutButton: { backgroundColor: 'rgba(255,255,255,0.1)', padding: 12, borderRadius: 12 },
-  mainContent: { padding: 20 },
-  section: { marginBottom: 20 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  sectionTitle: { fontSize: 12, fontWeight: 'bold', color: '#94A3B8' },
-  gpsBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  gpsText: { fontSize: 10, color: '#94A3B8' },
-  pulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
-  attendanceCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 15, elevation: 2 },
-  attendanceContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  attendanceLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  attendanceIcon: { width: 50, height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  attendanceIconActive: { backgroundColor: '#22C55E' },
-  attendanceIconInactive: { backgroundColor: '#F1F5F9' },
-  attendanceStatus: { fontSize: 16, fontWeight: 'bold' },
-  attendanceTime: { fontSize: 10, color: '#94A3B8' },
-  checkInButton: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
-  checkInButtonActive: { backgroundColor: '#D97706', borderColor: '#FBBF24' },
-  checkOutButton: { backgroundColor: '#FFF', borderColor: '#FEE2E2' },
-  checkInButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 12 },
-  checkOutButtonText: { color: '#DC2626' },
-  vehicleCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, elevation: 2 },
-  vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  vehicleLabel: { fontSize: 10, color: '#D97706', fontWeight: 'bold' },
-  vehicleNumber: { fontSize: 32, fontWeight: 'bold', color: '#1E293B' },
-  vehicleStats: { alignItems: 'flex-end', gap: 5 },
-  batteryContainer: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F8FAFC', padding: 5, borderRadius: 8 },
-  batteryText: { fontSize: 12, fontWeight: 'bold' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  statusText: { fontSize: 10, fontWeight: 'bold' },
-  statusGrid: { flexDirection: 'row', gap: 10 },
-  statusButton: { flex: 1, alignItems: 'center', padding: 10, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#F1F5F9' },
-  statusButtonActive: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-  statusButtonDisabled: { opacity: 0.5 },
-  statusButtonText: { fontSize: 10, color: '#94A3B8', marginTop: 5 },
-  statusButtonTextActive: { color: '#D97706', fontWeight: 'bold' },
-  actionGrid: { flexDirection: 'row', gap: 15 },
-  actionCard: { flex: 1, backgroundColor: '#FFF', padding: 15, borderRadius: 20, alignItems: 'center', elevation: 2 },
-  actionIcon: { width: 45, height: 45, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  reportIcon: { backgroundColor: '#FEE2E2' },
-  photoIcon: { backgroundColor: '#FEF3C7' },
-  actionTitle: { fontSize: 12, fontWeight: 'bold', color: '#1E293B' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFF', borderRadius: 24, padding: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold' },
-  stepContent: { alignItems: 'center' },
-  faceAuthContainer: { width: 100, height: 100, borderRadius: 20, backgroundColor: '#F8FAFC', borderStyle: 'dashed', borderWidth: 2, borderColor: '#D97706', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  authButton: { backgroundColor: '#D97706', paddingHorizontal: 40, paddingVertical: 12, borderRadius: 12 },
-  authButtonText: { color: '#FFF', fontWeight: 'bold' },
-  batteryTextInput: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 15, height: 100, marginBottom: 20 },
-  finishButton: { backgroundColor: '#1E293B', width: '100%', padding: 15, borderRadius: 12, alignItems: 'center' },
-  finishButtonText: { color: '#FFF', fontWeight: 'bold' },
-  mantraFooter: { alignItems: 'center', marginTop: 20 },
-  mantraText: { fontSize: 8, color: '#94A3B8', letterSpacing: 1 }
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: isSmallDevice ? 60 : 80,
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: isSmallDevice ? 16 : 20,
+    paddingTop: Platform.OS === 'ios'
+      ? (isSmallDevice ? 15 : 20)
+      : StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 35, // Adjusted for Android
+    paddingBottom: isSmallDevice ? 16 : 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 8 : 10,
+  },
+  logo: {
+    width: isSmallDevice ? 36 : 40,
+    height: isSmallDevice ? 36 : 40,
+    backgroundColor: '#D97706',
+    borderRadius: isSmallDevice ? 10 : 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: isSmallDevice ? 16 : 18,
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  logoSubtitle: {
+    color: '#D97706',
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: 'bold',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  logoTitle: {
+    fontSize: isSmallDevice ? 14 : 16,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 8 : 10,
+  },
+  notificationButton: {
+    padding: isSmallDevice ? 8 : 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: isSmallDevice ? 10 : 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: isSmallDevice ? 8 : 10,
+    right: isSmallDevice ? 8 : 10,
+    width: isSmallDevice ? 6 : 8,
+    height: isSmallDevice ? 6 : 8,
+    backgroundColor: '#EF4444',
+    borderRadius: isSmallDevice ? 3 : 4,
+    borderWidth: 1,
+    borderColor: '#FFF',
+  },
+  avatarContainer: {
+    width: isSmallDevice ? 36 : 40,
+    height: isSmallDevice ? 36 : 40,
+    borderRadius: isSmallDevice ? 10 : 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  profileCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: isSmallDevice ? 20 : 24,
+    padding: isSmallDevice ? 12 : 16,
+    ...Platform.select({
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  profileContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  shiftText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: 'bold',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  driverName: {
+    fontSize: isSmallDevice ? 16 : 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginVertical: isSmallDevice ? 2 : 4,
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  idBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 4 : 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: isSmallDevice ? 8 : 10,
+    paddingVertical: isSmallDevice ? 3 : 4,
+    borderRadius: isSmallDevice ? 10 : 12,
+    alignSelf: 'flex-start',
+  },
+  statusDot: {
+    width: isSmallDevice ? 5 : 6,
+    height: isSmallDevice ? 5 : 6,
+    borderRadius: isSmallDevice ? 2.5 : 3,
+    backgroundColor: '#64748B',
+  },
+  statusDotActive: {
+    backgroundColor: '#22C55E',
+  },
+  idText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: isSmallDevice ? 10 : 12,
+    borderRadius: isSmallDevice ? 10 : 12,
+    marginLeft: isSmallDevice ? 8 : 12,
+  },
+  mainContent: {
+    padding: isSmallDevice ? 16 : 20,
+  },
+  section: {
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 8 : 10,
+  },
+  sectionTitle: {
+    fontSize: isSmallDevice ? 11 : 12,
+    fontWeight: 'bold',
+    color: '#94A3B8',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+    letterSpacing: 0.5,
+  },
+  gpsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 3 : 4,
+  },
+  gpsText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#94A3B8',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pulseDot: {
+    width: isSmallDevice ? 6 : 8,
+    height: isSmallDevice ? 6 : 8,
+    borderRadius: isSmallDevice ? 3 : 4,
+    backgroundColor: '#22C55E',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#22C55E',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  attendanceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 16 : 20,
+    padding: isSmallDevice ? 12 : 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  attendanceContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  attendanceLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 10 : 12,
+  },
+  attendanceIcon: {
+    width: isSmallDevice ? 45 : 50,
+    height: isSmallDevice ? 45 : 50,
+    borderRadius: isSmallDevice ? 12 : 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attendanceIconActive: {
+    backgroundColor: '#22C55E',
+  },
+  attendanceIconInactive: {
+    backgroundColor: '#F1F5F9',
+  },
+  attendanceStatus: {
+    fontSize: isSmallDevice ? 14 : 16,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  attendanceTime: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#94A3B8',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  checkInButton: {
+    paddingHorizontal: isSmallDevice ? 16 : 20,
+    paddingVertical: isSmallDevice ? 8 : 10,
+    borderRadius: isSmallDevice ? 10 : 12,
+    borderWidth: 1,
+  },
+  checkInButtonActive: {
+    backgroundColor: '#D97706',
+    borderColor: '#D97706',
+  },
+  checkOutButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FEE2E2',
+  },
+  checkInButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: isSmallDevice ? 11 : 12,
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  checkOutButtonText: {
+    color: '#DC2626',
+  },
+  vehicleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 20 : 24,
+    padding: isSmallDevice ? 16 : 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  vehicleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  vehicleLabel: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#D97706',
+    fontWeight: 'bold',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+    letterSpacing: 0.5,
+  },
+  vehicleNumber: {
+    fontSize: isSmallDevice ? 28 : 32,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  vehicleStats: {
+    alignItems: 'flex-end',
+    gap: isSmallDevice ? 4 : 5,
+  },
+  batteryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 4 : 5,
+    backgroundColor: '#F8FAFC',
+    padding: isSmallDevice ? 4 : 5,
+    borderRadius: isSmallDevice ? 6 : 8,
+  },
+  batteryText: {
+    fontSize: isSmallDevice ? 11 : 12,
+    fontWeight: 'bold',
+    color: '#22C55E',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  lowBatteryText: {
+    color: '#DC2626',
+  },
+  mediumBatteryText: {
+    color: '#F59E0B',
+  },
+  statusBadge: {
+    paddingHorizontal: isSmallDevice ? 8 : 10,
+    paddingVertical: isSmallDevice ? 3 : 4,
+    borderRadius: isSmallDevice ? 6 : 8,
+  },
+  statusText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    fontWeight: 'bold',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    gap: isSmallDevice ? 8 : 10,
+  },
+  statusButton: {
+    flex: 1,
+    alignItems: 'center',
+    padding: isSmallDevice ? 8 : 10,
+    borderRadius: isSmallDevice ? 10 : 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  statusButtonActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  statusButtonDisabled: {
+    opacity: 0.5,
+  },
+  statusButtonText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#94A3B8',
+    marginTop: isSmallDevice ? 3 : 5,
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  statusButtonTextActive: {
+    color: '#D97706',
+    fontWeight: 'bold',
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    gap: isSmallDevice ? 12 : 15,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    padding: isSmallDevice ? 12 : 15,
+    borderRadius: isSmallDevice ? 16 : 20,
+    alignItems: 'center',
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  actionIcon: {
+    width: isSmallDevice ? 40 : 45,
+    height: isSmallDevice ? 40 : 45,
+    borderRadius: isSmallDevice ? 10 : 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 6 : 10,
+  },
+  reportIcon: {
+    backgroundColor: '#FEE2E2',
+  },
+  photoIcon: {
+    backgroundColor: '#FEF3C7',
+  },
+  actionTitle: {
+    fontSize: isSmallDevice ? 11 : 12,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+    marginBottom: 2,
+  },
+  actionSubtitle: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#94A3B8',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: isSmallDevice ? 16 : 20,
+    padding: isSmallDevice ? 12 : 16,
+    marginTop: isSmallDevice ? 8 : 10,
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 8 : 10,
+    marginBottom: isSmallDevice ? 8 : 10,
+  },
+  infoText: {
+    fontSize: isSmallDevice ? 11 : 12,
+    color: '#64748B',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: isSmallDevice ? 16 : 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: isSmallDevice ? 20 : 24,
+    padding: isSmallDevice ? 16 : 20,
+  },
+  iosModal: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+  },
+  androidModal: {
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  modalTitle: {
+    fontSize: isSmallDevice ? 16 : 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  closeButton: {
+    padding: isSmallDevice ? 4 : 6,
+  },
+  stepContent: {
+    alignItems: 'center',
+  },
+  faceAuthContainer: {
+    width: isSmallDevice ? 90 : 100,
+    height: isSmallDevice ? 90 : 100,
+    borderRadius: isSmallDevice ? 18 : 20,
+    backgroundColor: '#F8FAFC',
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#D97706',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  stepDescription: {
+    fontSize: isSmallDevice ? 12 : 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: isSmallDevice ? 16 : 20,
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  authButton: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: isSmallDevice ? 32 : 40,
+    paddingVertical: isSmallDevice ? 10 : 12,
+    borderRadius: isSmallDevice ? 10 : 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  authButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: isSmallDevice ? 14 : 16,
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  batteryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: isSmallDevice ? 8 : 10,
+    marginBottom: isSmallDevice ? 16 : 20,
+  },
+  batteryModalTitle: {
+    fontSize: isSmallDevice ? 16 : 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  batteryTextInput: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: isSmallDevice ? 10 : 12,
+    padding: isSmallDevice ? 12 : 15,
+    height: isSmallDevice ? 80 : 100,
+    marginBottom: isSmallDevice ? 16 : 20,
+    fontSize: isSmallDevice ? 14 : 16,
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  finishButton: {
+    backgroundColor: '#1E293B',
+    width: '100%',
+    padding: isSmallDevice ? 14 : 15,
+    borderRadius: isSmallDevice ? 10 : 12,
+    alignItems: 'center',
+  },
+  finishButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: isSmallDevice ? 14 : 16,
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: isSmallDevice ? 8 : 12,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  mantraText: {
+    fontSize: isSmallDevice ? 12 : 14,
+    color: '#D97706',
+    fontWeight: 'bold',
+    fontFamily: isIOS ? 'System' : 'sans-serif-medium',
+    marginBottom: 2,
+  },
+  footerText: {
+    fontSize: isSmallDevice ? 9 : 10,
+    color: '#94A3B8',
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  // Platform-specific styles
+  iosShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  iosButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  iosPrimaryButton: {
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  iosBorder: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  iosInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
 });
 
 export default HomeScreen;

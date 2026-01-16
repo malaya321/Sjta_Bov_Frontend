@@ -195,7 +195,7 @@ const navStyles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     height: Platform.OS === 'ios' ? 90 : 70,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#5d0e0aff',
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     borderTopWidth: 0,
