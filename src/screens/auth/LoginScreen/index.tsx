@@ -118,10 +118,10 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
           style={styles.backgroundCircle}
           resizeMode="cover"
         >
-          <LinearGradient
+          {/* <LinearGradient
             colors={['rgba(120, 20, 15, 0.85)', 'rgba(56, 28, 11, 0.8)', 'rgba(94, 1, 1, 0.9)']}
             style={StyleSheet.absoluteFillObject}
-          />
+          /> */}
 
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -150,8 +150,8 @@ const LoginScreen = ({ onLogin }: { onLogin: (role: 'driver' | 'supervisor') => 
               </View>
 
               <View style={styles.titleContainer}>
-                <Text style={styles.title}>Shreejjj Jagannath{'\n'}<Text style={styles.titleHighlight}>Temple Administration</Text></Text>
-                <Text style={styles.subtitle}>Enter credentialss to start your divine service.</Text>
+                <Text style={styles.title}>Shree Jagannath{'\n'}<Text style={styles.titleHighlight}>Temple Administration</Text></Text>
+                <Text style={styles.subtitle}>Enter credentials to start your divine service.</Text>
               </View>
 
               <View style={styles.formContainer}>
@@ -231,23 +231,23 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
   scrollContainer: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 120 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 60 },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logo: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  logo: { width: 55, height: 55, borderRadius: 16, justifyContent: 'center', alignItems: 'center', elevation: 8 },
   logoText: { color: '#ffffff', fontWeight: '900', fontSize: 20 },
   logoTextContainer: { gap: 2 },
-  logoTitle: { color: '#ffffff', fontSize: 20, fontWeight: '900' },
-  logoSubtitle: { color: '#fbbf24', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
+  logoTitle: { color: '#ffffff', fontSize: 30, fontWeight: '900' },
+  logoSubtitle: { color: '#fbbf24', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
   languageSelector: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
-  languageText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
+  languageText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   titleContainer: { marginBottom: 40 },
   title: { color: '#ffffff', fontSize: 28, fontWeight: '900', lineHeight: 38 },
   titleHighlight: { color: '#d97706' },
-  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 12 },
-  formContainer: { gap: 16 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 30, paddingHorizontal: 20, height: 56 },
+  subtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 12,fontWeight:600 },
+  formContainer: { gap: 20 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.34)', borderRadius: 30, paddingHorizontal: 20, height: 56, },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#ffffff', fontSize: 16 },
+  input: { flex: 1, color: '#ffffff', fontSize: 16,fontWeight:600, },
   errorContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(239, 68, 68, 0.2)', padding: 12, borderRadius: 20 },
   errorText: { color: '#fecaca', fontSize: 12, fontWeight: 'bold' },
   loginButton: { backgroundColor: '#d97706', borderRadius: 30, height: 56, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 12, marginTop: 8, elevation: 8 },
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   forgotPasswordContainer: { alignItems: 'center', marginTop: 30 },
   forgotPasswordText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 'bold' },
   bottomContainer: { backgroundColor: 'rgba(120, 15, 15, 0)', padding: 10, borderTopLeftRadius: 32, borderTopRightRadius: 32, alignItems: 'center', position: 'absolute', bottom: 0, left: 0, right: 0, },
-  bottomTitle: { color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: '900', marginBottom: 10 },
+  bottomTitle: { color: 'rgba(255, 255, 255, 0.43)', fontSize: 10, fontWeight: '900', marginBottom: 10,letterSpacing:.8, },
   bottomFeatures: { flexDirection: 'row', gap: 20 },
   featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   featureDot: { width: 4, height: 4, backgroundColor: '#d97706', borderRadius: 2 },
