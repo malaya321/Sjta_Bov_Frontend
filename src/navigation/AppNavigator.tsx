@@ -10,12 +10,15 @@ import {
   RotateCcw, 
   LayoutDashboard, 
   Users, 
-  ClipboardList 
+  ClipboardList,
+  House
 } from 'lucide-react-native';
 
 // Import your screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
+import ZoneScreen from '../screens/ZoneScreen';
+import AlertScreen from '../screens/AlertScreen';
 import SupervisorScreen from '../screens/SupervisorScreen'; // Make sure to create this file
 
 // Types
@@ -62,12 +65,13 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
         name="Home" 
         children={() => <HomeScreen onLogout={onLogout} />}
         options={{
-          tabBarIcon: ({ color }) => <Power size={22} color={color} />,
+          tabBarIcon: ({ color }) =><House size={22} color={color}/>,
         }}
       />
       <Tab.Screen 
         name="Zone" 
-        component={View} 
+        // component={View}
+        children={() => <ZoneScreen />} 
         options={{
           tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
         }}
@@ -86,7 +90,8 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
       />
       <Tab.Screen 
         name="Alerts" 
-        component={View} 
+        // component={View} 
+         children={() => <AlertScreen />} 
         options={{
           tabBarIcon: ({ color }) => <Bell size={22} color={color} />,
         }}

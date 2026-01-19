@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView,
   View,
@@ -33,6 +34,7 @@ import {
   Wifi,
   Settings,
 } from 'lucide-react-native';
+import { useLogout } from '../../hooks/useAuth';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -46,6 +48,9 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [batteryLevel] = useState(82);
   const [batteryText, setBatteryText] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
+  
+  // Use the logout mutation hook
+  const logoutMutation = useLogout();
 
   const driverData = {
     name: "Rajesh Kumar",
@@ -61,6 +66,52 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     'Cleaning': { bg: '#DBEAFE', text: '#1D4ED8', icon: '#3B82F6' },
     'Fault': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
     'Idle': { bg: '#F1F5F9', text: '#64748B', icon: '#94A3B8' }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => console.log('Logout cancelled')
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // If user is checked in, prompt for check-out first
+              if (isCheckedIn) {
+                Alert.alert(
+                  'Check Out Required',
+                  'Please check out from your shift before logging out.',
+                  [{ text: 'OK' }]
+                );
+                return;
+              }
+
+              // Trigger logout mutation
+              await logoutMutation.mutateAsync();
+              
+              // Call the parent logout function after successful logout
+              onLogout();
+              
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert(
+                'Logout Failed',
+                'There was an issue logging out. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleCheckInFlow = () => {
@@ -133,6 +184,9 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     }
   };
 
+  // Determine if logout is in progress
+  const isLoggingOut = logoutMutation.isPending;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -150,7 +204,11 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           <View style={styles.headerTop}>
             <View style={styles.logoContainer}>
               <View style={styles.logo}>
-                <Text style={styles.logoText}>J</Text>
+                <Image
+                  source={require('../../assets/image/purilogo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
               <View>
                 <Text style={styles.logoSubtitle}>SJTA Driver App</Text>
@@ -165,6 +223,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                   Alert.alert('Notifications', 'No new notifications');
                 }}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
                 <Bell size={isSmallDevice ? 18 : 20} color="#94A3B8" />
                 {hasNotifications && <View style={styles.notificationBadge} />}
@@ -173,6 +232,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 style={[styles.avatarContainer, isIOS && styles.iosShadow]}
                 onPress={() => Alert.alert('Profile', 'View profile details')}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
                 {/* <Image 
                   source={{ uri: driverData.avatarUrl }} 
@@ -194,20 +254,22 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 </View>
               </View>
               <TouchableOpacity
-                style={[styles.logoutButton, isIOS && styles.iosButton]}
-                onPress={() => {
-                  Alert.alert(
-                    'Logout',
-                    'Are you sure you want to logout?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Logout', onPress: onLogout }
-                    ]
-                  );
-                }}
+                style={[
+                  styles.logoutButton, 
+                  isIOS && styles.iosButton,
+                  isLoggingOut && styles.logoutButtonDisabled
+                ]}
+                onPress={handleLogout}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
-                <LogOut size={isSmallDevice ? 18 : 22} color="#FFFFFF" />
+                {isLoggingOut ? (
+                  <View style={styles.loadingContainer}>
+                    <View style={styles.loadingSpinner} />
+                  </View>
+                ) : (
+                  <LogOut size={isSmallDevice ? 18 : 22} color="#FFFFFF" />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -251,10 +313,12 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                     styles.checkInButton,
                     isCheckedIn ? styles.checkOutButton : styles.checkInButtonActive,
                     isIOS && styles.iosButton,
-                    !isCheckedIn && isIOS && styles.iosPrimaryButton
+                    !isCheckedIn && isIOS && styles.iosPrimaryButton,
+                    isLoggingOut && styles.buttonDisabled
                   ]}
                   onPress={handleCheckInFlow}
                   activeOpacity={0.7}
+                  disabled={isLoggingOut}
                 >
                   <Text style={[
                     styles.checkInButtonText,
@@ -315,7 +379,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 {['Running', 'Charging', 'Cleaning', 'Fault'].map((status) => (
                   <TouchableOpacity
                     key={status}
-                    disabled={!isCheckedIn}
+                    disabled={!isCheckedIn || isLoggingOut}
                     onPress={() => handleStatusChange(status)}
                     style={[
                       styles.statusButton,
@@ -342,7 +406,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Quick Actions</Text>
-              <TouchableOpacity>
+              <TouchableOpacity disabled={isLoggingOut}>
                 <Settings size={isSmallDevice ? 14 : 16} color="#94A3B8" />
               </TouchableOpacity>
             </View>
@@ -351,6 +415,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 style={[styles.actionCard, isIOS && styles.iosShadow]}
                 onPress={() => Alert.alert('Report Fault', 'Fault reporting feature')}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
                 <View style={[styles.actionIcon, styles.reportIcon]}>
                   <AlertTriangle size={isSmallDevice ? 20 : 24} color="#DC2626" />
@@ -363,6 +428,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 style={[styles.actionCard, isIOS && styles.iosShadow]}
                 onPress={() => Alert.alert('Battery Photo', 'Camera will open')}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
                 <View style={[styles.actionIcon, styles.photoIcon]}>
                   <Camera size={isSmallDevice ? 20 : 24} color="#D97706" />
@@ -405,6 +471,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                 onPress={() => setShowAuthModal(false)}
                 style={styles.closeButton}
                 activeOpacity={0.7}
+                disabled={isLoggingOut}
               >
                 <X size={isSmallDevice ? 20 : 24} color="#94A3B8" />
               </TouchableOpacity>
@@ -429,6 +496,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                     ]}
                     onPress={nextAuthStep}
                     activeOpacity={0.7}
+                    disabled={isLoggingOut}
                   >
                     <Text style={styles.authButtonText}>Scan Face</Text>
                   </TouchableOpacity>
@@ -450,6 +518,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                     multiline
                     numberOfLines={4}
                     textAlignVertical="top"
+                    editable={!isLoggingOut}
                   />
                   <TouchableOpacity
                     style={[
@@ -458,6 +527,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                     ]}
                     onPress={nextAuthStep}
                     activeOpacity={0.7}
+                    disabled={isLoggingOut}
                   >
                     <Text style={styles.finishButtonText}>Complete Check-in</Text>
                   </TouchableOpacity>
@@ -493,7 +563,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmallDevice ? 16 : 20,
     paddingTop: Platform.OS === 'ios'
       ? (isSmallDevice ? 15 : 20)
-      : StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 35, // Adjusted for Android
+      : StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 35,
     paddingBottom: isSmallDevice ? 16 : 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -527,11 +597,11 @@ const styles = StyleSheet.create({
   logo: {
     width: isSmallDevice ? 36 : 40,
     height: isSmallDevice ? 36 : 40,
-    backgroundColor: '#D97706',
     borderRadius: isSmallDevice ? 10 : 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoImage: { width: '100%', height: '100%' },
   logoText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
@@ -666,6 +736,29 @@ const styles = StyleSheet.create({
     padding: isSmallDevice ? 10 : 12,
     borderRadius: isSmallDevice ? 10 : 12,
     marginLeft: isSmallDevice ? 8 : 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutButtonDisabled: {
+    opacity: 0.5,
+  },
+  loadingContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingSpinner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderTopColor: 'transparent',
+    animationDuration: '1s',
+    animationIterationCount: 'infinite',
+    animationTimingFunction: 'linear',
+    animationName: { '0%': { transform: [{ rotate: '0deg' }] }, '100%': { transform: [{ rotate: '360deg' }] } },
   },
   mainContent: {
     padding: isSmallDevice ? 16 : 20,
@@ -790,6 +883,9 @@ const styles = StyleSheet.create({
   },
   checkOutButtonText: {
     color: '#DC2626',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   vehicleCard: {
     backgroundColor: '#FFFFFF',

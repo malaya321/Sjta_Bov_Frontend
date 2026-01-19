@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView,
   View,
@@ -14,8 +15,8 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import {
   Lock,
   Eye,
@@ -25,6 +26,7 @@ import {
   AlertCircle,
   Smartphone,
 } from 'lucide-react-native';
+import { useLogin } from '../../../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -33,11 +35,35 @@ const LoginScreen = ({
 }: {
   onLogin: (role: 'driver' | 'supervisor') => void;
 }) => {
-  const [credentials, setCredentials] = useState({ userId: '', password: '' });
+  const [credentials, setCredentials] = useState({ 
+    userId: '', 
+    password: '' 
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle, loading, success, error
-  const [role, setRole] = useState<'driver' | 'supervisor' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Use the login mutation hook
+  const loginMutation = useLogin();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    checkExistingLogin();
+  }, []);
+
+  const checkExistingLogin = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const userData = await AsyncStorage.getItem('userData');
+      
+      if (token && userData) {
+        const parsedData = JSON.parse(userData);
+        console.log('Found existing login:', parsedData);
+        // Auto-login or show welcome back message
+      }
+    } catch (error) {
+      console.error('Error checking existing login:', error);
+    }
+  };
 
   const handleChange = (name: string, value: string) => {
     setCredentials(prev => ({ ...prev, [name]: value }));
@@ -45,32 +71,67 @@ const LoginScreen = ({
   };
 
   const handleLogin = () => {
+    // Prepare the complete login data with static request_type
+    const loginData = {
+      request_type: 'mobile', // Static string as requested
+      username: credentials.userId, // Using mobile field as per request_type
+      password: credentials.password,
+    };
+
+    console.log('Login Data:', loginData);
+
     if (!credentials.userId || !credentials.password) {
-      setErrorMessage('Please enter both User ID and Password');
+      setErrorMessage('Please enter both Mobile Number and Password');
       return;
     }
 
-    setStatus('loading');
+    // Validate mobile number format
+    // const mobileRegex = /^[0-9]{10}$/;
+    // if (!mobileRegex.test(credentials.userId)) {
+    //   setErrorMessage('Please enter a valid 10-digit mobile number');
+    //   return;
+    // }
 
-    // Simulate API Call
-    setTimeout(() => {
-      const uid = credentials.userId.toLowerCase();
+    // Clear any previous errors
+    setErrorMessage('');
 
-      if (uid === '1234' && credentials.password === '1234') {
-        setRole('driver');
-        setStatus('success');
-      } else if (uid === '9999' && credentials.password === '9999') {
-        setRole('supervisor');
-        setStatus('success');
-      } else {
-        setStatus('error');
-        setErrorMessage('Incorrect User ID or Password');
-      }
-    }, 1500);
+    // Trigger the login mutation
+    loginMutation.mutate(loginData, {
+      onSuccess: (data) => {
+        // Success is already handled in the mutation's onSuccess
+        // You can perform additional actions here if needed
+        
+        // Extract role from response
+        const role = data?.data?.role_name?.toLowerCase();
+        
+        // Navigate based on role
+        if (role === 'driver' || role === 'supervisor') {
+          // Add a small delay for better UX
+          setTimeout(() => {
+            onLogin(role as 'driver' | 'supervisor');
+          }, 500);
+        } else {
+          Alert.alert(
+            'Login Successful',
+            'Redirecting to dashboard...',
+            [{ text: 'OK' }]
+          );
+        }
+      },
+      // onError is already handled in the mutation hook
+    });
   };
 
+  // Determine if we should show loading state
+  const isLoading = loginMutation.isPending;
+  const isSuccess = loginMutation.isSuccess;
+  const loginError = loginMutation.error as any;
+
   // Success Screen View
-  if (status === 'success') {
+  if (isSuccess) {
+    const role = loginMutation.data?.data?.role_name?.toLowerCase() || 'user';
+    const userName = loginMutation.data?.data?.user?.name || 'User';
+    
     return (
       <SafeAreaView style={styles.successContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -87,7 +148,7 @@ const LoginScreen = ({
             <Text style={styles.successSubtitle}>
               Welcome,{' '}
               <Text style={styles.successBold}>
-                {role === 'driver' ? 'Rajesh Kumar' : 'Admin Supervisor'}
+                {userName}
               </Text>
               . Your session is being prepared.
             </Text>
@@ -99,7 +160,7 @@ const LoginScreen = ({
 
               <TouchableOpacity
                 style={styles.successButton}
-                onPress={() => role && onLogin(role)}
+                onPress={() => onLogin(role as 'driver' | 'supervisor')}
               >
                 <Text style={styles.successButtonText}>Open Dashboard</Text>
               </TouchableOpacity>
@@ -129,11 +190,6 @@ const LoginScreen = ({
           style={styles.backgroundCircle}
           resizeMode="cover"
         >
-          {/* <LinearGradient
-            colors={['rgba(120, 20, 15, 0.85)', 'rgba(56, 28, 11, 0.8)', 'rgba(94, 1, 1, 0.9)']}
-            style={StyleSheet.absoluteFillObject}
-          /> */}
-
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardView}
@@ -145,7 +201,6 @@ const LoginScreen = ({
               <View style={styles.header}>
                 <View style={styles.logoContainer}>
                   <View style={styles.logo}>
-                    {/* <Text style={styles.logoText}>S</Text> */}
                     <Image
                       source={require('../../../assets/image/purilogo.png')}
                       style={styles.logoImage}
@@ -170,7 +225,7 @@ const LoginScreen = ({
                   </Text>
                 </Text>
                 <Text style={styles.subtitle}>
-                  Enter credentials to start your divine service.
+                  Enter mobile number and password to start your divine service.
                 </Text>
               </View>
 
@@ -181,11 +236,15 @@ const LoginScreen = ({
                   </View>
                   <TextInput
                     style={styles.input}
-                    placeholder="User ID / Mobile"
+                    placeholder="Mobile Number"
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={credentials.userId}
                     onChangeText={text => handleChange('userId', text)}
                     autoCapitalize="none"
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    editable={!isLoading}
+                    selectTextOnFocus={!isLoading}
                   />
                 </View>
 
@@ -200,9 +259,14 @@ const LoginScreen = ({
                     value={credentials.password}
                     onChangeText={text => handleChange('password', text)}
                     secureTextEntry={!showPassword}
+                    editable={!isLoading}
+                    selectTextOnFocus={!isLoading}
+                    onSubmitEditing={handleLogin}
+                    returnKeyType="go"
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff size={20} color="rgba(255,255,255,0.3)" />
@@ -212,6 +276,7 @@ const LoginScreen = ({
                   </TouchableOpacity>
                 </View>
 
+                {/* Show validation error */}
                 {errorMessage ? (
                   <View style={styles.errorContainer}>
                     <AlertCircle size={16} color="#fecaca" />
@@ -219,15 +284,25 @@ const LoginScreen = ({
                   </View>
                 ) : null}
 
+                {/* Show API error */}
+                {loginError && !errorMessage ? (
+                  <View style={styles.errorContainer}>
+                    <AlertCircle size={16} color="#fecaca" />
+                    <Text style={styles.errorText}>
+                      {loginError.message || 'Login failed. Please try again.'}
+                    </Text>
+                  </View>
+                ) : null}
+
                 <TouchableOpacity
                   style={[
                     styles.loginButton,
-                    status === 'loading' && styles.loginButtonDisabled,
+                    isLoading && styles.loginButtonDisabled,
                   ]}
                   onPress={handleLogin}
-                  disabled={status === 'loading'}
+                  disabled={isLoading}
                 >
-                  {status === 'loading' ? (
+                  {isLoading ? (
                     <ActivityIndicator color="#ffffff" />
                   ) : (
                     <>
@@ -236,9 +311,22 @@ const LoginScreen = ({
                     </>
                   )}
                 </TouchableOpacity>
+
+                {/* Show retry button if there was an error */}
+                {loginError && !isLoading ? (
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={handleLogin}
+                  >
+                    <Text style={styles.retryButtonText}>Retry Login</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
 
-              <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <TouchableOpacity 
+                style={styles.forgotPasswordContainer}
+                disabled={isLoading}
+              >
                 <Text style={styles.forgotPasswordText}>FORGOT PASSWORD?</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -292,7 +380,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 8,
   },
-  logoText: { color: '#ffffff', fontWeight: '900', fontSize: 20 },
   logoTextContainer: { gap: 2 },
   logoTitle: { color: '#ffffff', fontSize: 30, fontWeight: '900' },
   logoSubtitle: {
@@ -315,7 +402,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     marginTop: 12,
-    fontWeight: 600,
+    fontWeight: '600',
   },
   formContainer: { gap: 20 },
   inputContainer: {
@@ -329,7 +416,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#ffffff', fontSize: 16, fontWeight: 600 },
+  input: { flex: 1, color: '#ffffff', fontSize: 16, fontWeight: '600' },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -350,8 +437,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     elevation: 8,
   },
-  loginButtonDisabled: { opacity: 0.5 },
+  loginButtonDisabled: { opacity: 0.7 },
   loginButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
+  retryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 30,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   forgotPasswordContainer: { alignItems: 'center', marginTop: 30 },
   forgotPasswordText: {
     color: 'rgba(255,255,255,0.4)',
@@ -359,10 +461,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   bottomContainer: {
-    // backgroundColor: 'rgba(120, 15, 15, 0)',
-    // padding: 10,
-    // borderTopLeftRadius: 32,
-    // borderTopRightRadius: 32,
     alignItems: 'center',
     bottom: 0,
     left: 0,
