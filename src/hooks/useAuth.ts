@@ -39,7 +39,7 @@ export const useLogin = () => {
       queryClient.setQueryData(authKeys.user(), data.data);
       
       // Show success message
-      Alert.alert('Success', 'Login successful!', [{ text: 'OK' }]);
+    //   Alert.alert('Success', 'Login successful!', [{ text: 'OK' }]);
     },
     onError: (error: any) => {
       console.error('Login error:', error);
@@ -75,7 +75,7 @@ export const useLogout = () => {
       // Remove items from AsyncStorage
       AsyncStorage.multiRemove(['userToken', 'userData']);
       
-      Alert.alert('Success', 'Logged out successfully!', [{ text: 'OK' }]);
+    //   Alert.alert('Success', 'Logged out successfully!', [{ text: 'OK' }]);
     },
     onError: (error) => {
       console.error('Logout error:', error);

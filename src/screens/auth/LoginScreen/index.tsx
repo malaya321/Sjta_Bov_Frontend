@@ -113,11 +113,11 @@ const LoginScreen = ({
             onLogin(role as 'driver' | 'supervisor');
           }, 500);
         } else {
-          Alert.alert(
-            'Login Successful',
-            'Redirecting to dashboard...',
-            [{ text: 'OK' }]
-          );
+          // Alert.alert(
+          //   'Login Successful',
+          //   'Redirecting to dashboard...',
+          //   [{ text: 'OK' }]
+          // );
         }
       },
       onError: (error: any) => {
@@ -135,44 +135,44 @@ const LoginScreen = ({
   if (isSuccess) {
     const role = loginMutation.data?.data?.role_name?.toLowerCase() || 'user';
     const userName = loginMutation.data?.data?.user?.name || 'User';
-    
-    return (
-      <SafeAreaView style={styles.successContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.successScrollContainer}>
-          <View style={styles.successContent}>
-            <View style={styles.successIconContainer}>
-              <View style={styles.successIconGlow} />
-              <View style={styles.successIcon}>
-                <ShieldCheck size={48} color="#d97706" />
-              </View>
-            </View>
+    onLogin(role as 'driver' | 'supervisor')
+    // return (
+    //   <SafeAreaView style={styles.successContainer}>
+    //     <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    //     <View style={styles.successScrollContainer}>
+    //       <View style={styles.successContent}>
+    //         <View style={styles.successIconContainer}>
+    //           <View style={styles.successIconGlow} />
+    //           <View style={styles.successIcon}>
+    //             <ShieldCheck size={48} color="#d97706" />
+    //           </View>
+    //         </View>
 
-            <Text style={styles.successTitle}>Jai Jagannath</Text>
-            <Text style={styles.successSubtitle}>
-              Welcome,{' '}
-              <Text style={styles.successBold}>
-                {userName}
-              </Text>
-              . Your session is being prepared.
-            </Text>
+    //         <Text style={styles.successTitle}>Jai Jagannath</Text>
+    //         <Text style={styles.successSubtitle}>
+    //           Welcome,{' '}
+    //           <Text style={styles.successBold}>
+    //             {userName}
+    //           </Text>
+    //           . Your session is being prepared.
+    //         </Text>
 
-            <View style={styles.successProgressContainer}>
-              <View style={styles.successProgressBar}>
-                <View style={[styles.successProgressFill, { width: '100%' }]} />
-              </View>
+    //         <View style={styles.successProgressContainer}>
+    //           <View style={styles.successProgressBar}>
+    //             <View style={[styles.successProgressFill, { width: '100%' }]} />
+    //           </View>
 
-              <TouchableOpacity
-                style={styles.successButton}
-                onPress={() => onLogin(role as 'driver' | 'supervisor')}
-              >
-                <Text style={styles.successButtonText}>Open Dashboard</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
+    //           <TouchableOpacity
+    //             style={styles.successButton}
+    //             onPress={() => onLogin(role as 'driver' | 'supervisor')}
+    //           >
+    //             <Text style={styles.successButtonText}>Open Dashboard</Text>
+    //           </TouchableOpacity>
+    //         </View>
+    //       </View>
+    //     </View>
+    //   </SafeAreaView>
+    // );
   }
 
   return (
