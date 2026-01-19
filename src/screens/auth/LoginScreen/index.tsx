@@ -27,20 +27,33 @@ import {
   Smartphone,
 } from 'lucide-react-native';
 import { useLogin } from '../../../hooks/useAuth';
+import { Formik } from 'formik';
+import * as Yup from 'yup';
 
 const { width } = Dimensions.get('window');
+
+// Define validation schema with Yup
+const LoginSchema = Yup.object().shape({
+  userId: Yup.string()
+    .required('User Id is required'),
+  password: Yup.string()
+    .required('Password is required')
+    .min(6, 'Password must be at least 6 characters'),
+});
+
+// Define form values type
+interface LoginFormValues {
+  userId: string;
+  password: string;
+}
 
 const LoginScreen = ({
   onLogin,
 }: {
   onLogin: (role: 'driver' | 'supervisor') => void;
 }) => {
-  const [credentials, setCredentials] = useState({ 
-    userId: '', 
-    password: '' 
-  });
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [apiErrorMessage, setApiErrorMessage] = useState('');
 
   // Use the login mutation hook
   const loginMutation = useLogin();
@@ -65,35 +78,24 @@ const LoginScreen = ({
     }
   };
 
-  const handleChange = (name: string, value: string) => {
-    setCredentials(prev => ({ ...prev, [name]: value }));
-    if (errorMessage) setErrorMessage('');
+  // Initial form values
+  const initialValues: LoginFormValues = {
+    userId: '',
+    password: '',
   };
 
-  const handleLogin = () => {
+  const handleLogin = (values: LoginFormValues) => {
     // Prepare the complete login data with static request_type
     const loginData = {
       request_type: 'mobile', // Static string as requested
-      username: credentials.userId, // Using mobile field as per request_type
-      password: credentials.password,
+      username: values.userId, // Using mobile field as per request_type
+      password: values.password,
     };
 
     console.log('Login Data:', loginData);
 
-    if (!credentials.userId || !credentials.password) {
-      setErrorMessage('Please enter both Mobile Number and Password');
-      return;
-    }
-
-    // Validate mobile number format
-    // const mobileRegex = /^[0-9]{10}$/;
-    // if (!mobileRegex.test(credentials.userId)) {
-    //   setErrorMessage('Please enter a valid 10-digit mobile number');
-    //   return;
-    // }
-
-    // Clear any previous errors
-    setErrorMessage('');
+    // Clear any previous API errors
+    setApiErrorMessage('');
 
     // Trigger the login mutation
     loginMutation.mutate(loginData, {
@@ -118,14 +120,16 @@ const LoginScreen = ({
           );
         }
       },
-      // onError is already handled in the mutation hook
+      onError: (error: any) => {
+        // Handle API errors
+        setApiErrorMessage(error.message || 'Login failed. Please try again.');
+      },
     });
   };
 
   // Determine if we should show loading state
   const isLoading = loginMutation.isPending;
   const isSuccess = loginMutation.isSuccess;
-  const loginError = loginMutation.error as any;
 
   // Success Screen View
   if (isSuccess) {
@@ -229,99 +233,124 @@ const LoginScreen = ({
                 </Text>
               </View>
 
-              <View style={styles.formContainer}>
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Smartphone size={18} color="rgba(255,255,255,0.5)" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Mobile Number"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={credentials.userId}
-                    onChangeText={text => handleChange('userId', text)}
-                    autoCapitalize="none"
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    editable={!isLoading}
-                    selectTextOnFocus={!isLoading}
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <View style={styles.inputIcon}>
-                    <Lock size={18} color="rgba(255,255,255,0.5)" />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    value={credentials.password}
-                    onChangeText={text => handleChange('password', text)}
-                    secureTextEntry={!showPassword}
-                    editable={!isLoading}
-                    selectTextOnFocus={!isLoading}
-                    onSubmitEditing={handleLogin}
-                    returnKeyType="go"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} color="rgba(255,255,255,0.3)" />
-                    ) : (
-                      <Eye size={20} color="rgba(255,255,255,0.3)" />
+              <Formik
+                initialValues={initialValues}
+                validationSchema={LoginSchema}
+                onSubmit={handleLogin}
+              >
+                {({
+                  handleChange,
+                  handleBlur,
+                  handleSubmit,
+                  values,
+                  errors,
+                  touched,
+                  isValid,
+                  dirty,
+                }) => (
+                  <View style={styles.formContainer}>
+                    {/* Mobile Number Input */}
+                    <View style={styles.inputContainer}>
+                      <View style={styles.inputIcon}>
+                        <Smartphone size={18} color="rgba(255,255,255,0.5)" />
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="User Id"
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        value={values.userId}
+                        onChangeText={handleChange('userId')}
+                        onBlur={handleBlur('userId')}
+                        autoCapitalize="none"
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                        editable={!isLoading}
+                        selectTextOnFocus={!isLoading}
+                      />
+                    </View>
+                    {touched.userId && errors.userId && (
+                      <View style={styles.errorContainer}>
+                        <AlertCircle size={16} color="#fecaca" />
+                        <Text style={styles.errorText}>{errors.userId}</Text>
+                      </View>
                     )}
-                  </TouchableOpacity>
-                </View>
 
-                {/* Show validation error */}
-                {errorMessage ? (
-                  <View style={styles.errorContainer}>
-                    <AlertCircle size={16} color="#fecaca" />
-                    <Text style={styles.errorText}>{errorMessage}</Text>
+                    {/* Password Input */}
+                    <View style={styles.inputContainer}>
+                      <View style={styles.inputIcon}>
+                        <Lock size={18} color="rgba(255,255,255,0.5)" />
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Password"
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        value={values.password}
+                        onChangeText={handleChange('password')}
+                        onBlur={handleBlur('password')}
+                        secureTextEntry={!showPassword}
+                        editable={!isLoading}
+                        selectTextOnFocus={!isLoading}
+                        onSubmitEditing={() => handleSubmit()}
+                        returnKeyType="go"
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
+                      >
+                        {showPassword ? (
+                          <EyeOff size={20} color="rgba(255,255,255,0.3)" />
+                        ) : (
+                          <Eye size={20} color="rgba(255,255,255,0.3)" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    {touched.password && errors.password && (
+                      <View style={styles.errorContainer}>
+                        <AlertCircle size={16} color="#fecaca" />
+                        <Text style={styles.errorText}>{errors.password}</Text>
+                      </View>
+                    )}
+
+                    {/* Show API error */}
+                    {apiErrorMessage ? (
+                      <View style={styles.errorContainer}>
+                        <AlertCircle size={16} color="#fecaca" />
+                        <Text style={styles.errorText}>
+                          {apiErrorMessage}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <TouchableOpacity
+                      style={[
+                        styles.loginButton,
+                        (!isValid || !dirty || isLoading) && styles.loginButtonDisabled,
+                      ]}
+                      onPress={() => handleSubmit()}
+                      disabled={!isValid || !dirty || isLoading}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#ffffff" />
+                      ) : (
+                        <>
+                          <Text style={styles.loginButtonText}>SIGN IN</Text>
+                          <ArrowRight size={20} color="#ffffff" />
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Show retry button if there was an error */}
+                    {apiErrorMessage && !isLoading ? (
+                      <TouchableOpacity
+                        style={styles.retryButton}
+                        onPress={() => handleSubmit()}
+                      >
+                        <Text style={styles.retryButtonText}>Retry Login</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
-                ) : null}
-
-                {/* Show API error */}
-                {loginError && !errorMessage ? (
-                  <View style={styles.errorContainer}>
-                    <AlertCircle size={16} color="#fecaca" />
-                    <Text style={styles.errorText}>
-                      {loginError.message || 'Login failed. Please try again.'}
-                    </Text>
-                  </View>
-                ) : null}
-
-                <TouchableOpacity
-                  style={[
-                    styles.loginButton,
-                    isLoading && styles.loginButtonDisabled,
-                  ]}
-                  onPress={handleLogin}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <>
-                      <Text style={styles.loginButtonText}>SIGN IN</Text>
-                      <ArrowRight size={20} color="#ffffff" />
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                {/* Show retry button if there was an error */}
-                {loginError && !isLoading ? (
-                  <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={handleLogin}
-                  >
-                    <Text style={styles.retryButtonText}>Retry Login</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+                )}
+              </Formik>
 
               <TouchableOpacity 
                 style={styles.forgotPasswordContainer}
@@ -404,7 +433,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontWeight: '600',
   },
-  formContainer: { gap: 20 },
+  formContainer: { gap: 12 }, // Reduced gap to accommodate validation errors
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,6 +453,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
     padding: 12,
     borderRadius: 20,
+    marginTop: 4,
+    marginBottom: 4,
   },
   errorText: { color: '#fecaca', fontSize: 12, fontWeight: 'bold' },
   loginButton: {
@@ -434,10 +465,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 16,
     elevation: 8,
   },
-  loginButtonDisabled: { opacity: 0.7 },
+  loginButtonDisabled: { opacity: 0.5 },
   loginButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
   retryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
