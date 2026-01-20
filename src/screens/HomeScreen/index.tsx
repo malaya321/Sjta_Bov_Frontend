@@ -42,7 +42,7 @@ const isIOS = Platform.OS === 'ios';
 const isSmallDevice = width < 375;
 
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authStep, setAuthStep] = useState(1);
   const [vehicleStatus, setVehicleStatus] = useState('Idle');
@@ -270,9 +270,9 @@ console.log(userToken,'userToken')
               <View style={styles.profileInfo}>
                 <Text style={styles.shiftText}>{driverData.shift}</Text>
                 <Text style={styles.driverName}>{driverData.name}</Text>
-                <View style={styles.idBadge}>
+                <View style={[styles.idBadge,isCheckedIn && styles.idBadgeActive]}>
                   <View style={[styles.statusDot, isCheckedIn && styles.statusDotActive]} />
-                  <Text style={styles.idText}>ID: {driverData.id} • {isCheckedIn ? 'ONLINE' : 'OFFLINE'}</Text>
+                  <Text style={[styles.idText,isCheckedIn && styles.idTextActive] }>ID: {driverData.id} • {isCheckedIn ? 'ONLINE' : 'OFFLINE'}</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     paddingBottom: isSmallDevice ? 60 : 80,
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgb(157, 20, 12)',
     paddingHorizontal: isSmallDevice ? 16 : 20,
     paddingTop: Platform.OS === 'ios'
       ? (isSmallDevice ? 15 : 20)
@@ -610,6 +610,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
+
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -622,8 +623,8 @@ const styles = StyleSheet.create({
     gap: isSmallDevice ? 8 : 10,
   },
   logo: {
-    width: isSmallDevice ? 36 : 40,
-    height: isSmallDevice ? 36 : 40,
+    width: isSmallDevice ? 36 : 50,
+    height: isSmallDevice ? 36 : 50,
     borderRadius: isSmallDevice ? 10 : 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -637,14 +638,14 @@ const styles = StyleSheet.create({
   },
   logoSubtitle: {
     color: '#D97706',
-    fontSize: isSmallDevice ? 9 : 10,
+    fontSize: isSmallDevice ? 9 : 12,
     fontWeight: 'bold',
     fontFamily: isIOS ? 'System' : 'sans-serif',
   },
   logoTitle: {
     fontSize: isSmallDevice ? 14 : 16,
     fontWeight: 'bold',
-    color: '#1E293B',
+    color: '#fff',
     fontFamily: isIOS ? 'System' : 'sans-serif-medium',
   },
   headerIcons: {
@@ -703,7 +704,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   profileCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#D97706',
     borderRadius: isSmallDevice ? 20 : 24,
     padding: isSmallDevice ? 12 : 16,
     ...Platform.select({
@@ -721,8 +722,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   shiftText: {
-    fontSize: isSmallDevice ? 9 : 10,
-    color: 'rgba(255,255,255,0.5)',
+    fontSize: isSmallDevice ? 9 : 12,
+    color: 'rgb(157, 20, 12)',
     fontWeight: 'bold',
     fontFamily: isIOS ? 'System' : 'sans-serif',
   },
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
     fontFamily: isIOS ? 'System' : 'sans-serif',
   },
   logoutButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgb(188, 16, 7)',
     padding: isSmallDevice ? 10 : 12,
     borderRadius: isSmallDevice ? 10 : 12,
     marginLeft: isSmallDevice ? 8 : 12,
@@ -1232,6 +1233,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  idTextActive:{color:'#22C55E'},
+  idBadgeActive:{backgroundColor:''},
 });
 
 export default HomeScreen;
