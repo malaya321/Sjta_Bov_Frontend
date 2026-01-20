@@ -1,18 +1,65 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { Users, Car, Send, LogOut, ChevronRight, MessageSquare, ClipboardCheck } from 'lucide-react-native';
+import { useLogout } from '../../hooks/useAuth';
 
 const SupervisorScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [selectedDriver, setSelectedDriver] = useState<any>(null);
   const [selectedBov, setSelectedBov] = useState('');
   const [message, setMessage] = useState('');
+    // Use the logout mutation hook
+    const logoutMutation = useLogout();
 
   const drivers = [
-    { id: 'D-1024', name: 'Rajesh Kumar', status: 'Available' },
+    { id: 'D-1024', name: 'SV Rajesh Kumar', status: 'Available' },
     { id: 'D-1025', name: 'Suresh Mohanty', status: 'In Shift' },
     { id: 'D-1026', name: 'Amit Singh', status: 'Available' },
   ];
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => console.log('Logout cancelled')
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // If user is checked in, prompt for check-out first
+              // if (isCheckedIn) {
+              //   Alert.alert(
+              //     'Check Out Required',
+              //     'Please check out from your shift before logging out.',
+              //     [{ text: 'OK' }]
+              //   );
+              //   return;
+              // }
 
+              // Trigger logout mutation
+              await logoutMutation.mutateAsync();
+              
+              // Call the parent logout function after successful logout
+              onLogout();
+              
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert(
+                'Logout Failed',
+                'There was an issue logging out. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
   const bovs = ['BOV-401', 'BOV-402', 'BOV-403', 'BOV-404', 'BOV-405'];
 
   const handleAssign = () => {
@@ -33,7 +80,7 @@ const SupervisorScreen = ({ onLogout }: { onLogout: () => void }) => {
           <Text style={styles.headerSubtitle}>SJTA ADMIN PANEL</Text>
           <Text style={styles.headerTitle}>Roster Management</Text>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={()=>{handleLogout()}}>
           <LogOut size={20} color="#DC2626" />
         </TouchableOpacity>
       </View>
@@ -107,7 +154,7 @@ const SupervisorScreen = ({ onLogout }: { onLogout: () => void }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0',paddingTop:50 },
   headerTitle: { fontSize: 20, fontWeight: '900', color: '#1E293B' },
   headerSubtitle: { fontSize: 10, fontWeight: 'bold', color: '#D97706' },
   logoutBtn: { padding: 10, backgroundColor: '#FEF2F2', borderRadius: 12 },

@@ -23,16 +23,19 @@ export const useLogin = () => {
     },
     onSuccess: async (data: LoginResponse) => {
       // Save token to AsyncStorage
-      const token = data?.data?.token;
+      const token = data?.token;
+      const userType = data?.role_name;
+      // console.log(userType,'userType++++')
       if (token) {
         await AsyncStorage.setItem('userToken', token);
+         await AsyncStorage.setItem('userType', userType);
         
         // Also save user info if needed
-        const userData = {
-          role: data?.data?.role_name,
-          ...data?.data?.user,
-        };
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        // const userData = {
+        //   role: data?.data?.role_name,
+        //   ...data?.data?.user,
+        // };
+        // await AsyncStorage.setItem('userData', JSON.stringify(userData));
       }
 
       // Update auth state in cache

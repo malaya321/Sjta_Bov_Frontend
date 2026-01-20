@@ -35,6 +35,7 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { useLogout } from '../../hooks/useAuth';
+import { ConfirmationAlert, confirmationAlert } from '../../components/ConfirmationAlert';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -48,6 +49,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [batteryLevel] = useState(82);
   const [batteryText, setBatteryText] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
+  const [showAlert, setShowAlert] = useState(false);
   
   // Use the logout mutation hook
   const logoutMutation = useLogout();
@@ -67,53 +69,73 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     'Fault': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
     'Idle': { bg: '#F1F5F9', text: '#64748B', icon: '#94A3B8' }
   };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => console.log('Logout cancelled')
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // If user is checked in, prompt for check-out first
-              if (isCheckedIn) {
-                Alert.alert(
-                  'Check Out Required',
-                  'Please check out from your shift before logging out.',
-                  [{ text: 'OK' }]
-                );
-                return;
-              }
-
-              // Trigger logout mutation
+const confirmLogout= async()=>{
+       // Trigger logout mutation
               await logoutMutation.mutateAsync();
               
               // Call the parent logout function after successful logout
               onLogout();
-              
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert(
-                'Logout Failed',
-                'There was an issue logging out. Please try again.',
-                [{ text: 'OK' }]
-              );
-            }
-          }
-        }
-      ],
-      { cancelable: true }
-    );
-  };
+    }
+  // const handleLogout = () => {
+    // Alert.alert(
+    //   'Logout',
+    //   'Are you sure you want to logout?',
+    //   [
+    //     {
+    //       text: 'Cancel',
+    //       style: 'cancel',
+    //       onPress: () => console.log('Logout cancelled')
+    //     },
+    //     {
+    //       text: 'Logout',
+    //       style: 'destructive',
+    //       onPress: async () => {
+    //         try {
+    //           // If user is checked in, prompt for check-out first
+    //           if (isCheckedIn) {
+    //             Alert.alert(
+    //               'Check Out Required',
+    //               'Please check out from your shift before logging out.',
+    //               [{ text: 'OK' }]
+    //             );
+    //             return;
+    //           }
 
+    //           // Trigger logout mutation
+    //           await logoutMutation.mutateAsync();
+              
+    //           // Call the parent logout function after successful logout
+    //           onLogout();
+              
+    //         } catch (error) {
+    //           console.error('Logout error:', error);
+    //           Alert.alert(
+    //             'Logout Failed',
+    //             'There was an issue logging out. Please try again.',
+    //             [{ text: 'OK' }]
+    //           );
+    //         }
+    //       }
+    //     }
+    //   ],
+    //   { cancelable: true }
+    // );
+    // const confirmLogout= async()=>{
+    //    // Trigger logout mutation
+    //           await logoutMutation.mutateAsync();
+              
+    //           // Call the parent logout function after successful logout
+    //           onLogout();
+    // }
+    //  confirmationAlert({
+    //   isCheckedIn,
+    //   onConfirm: confirmLogout,
+    // });
+  // };
+const userData =  AsyncStorage.getItem('userType');
+const userToken =  AsyncStorage.getItem('userToken');
+console.log(userData,'userData')
+console.log(userToken,'userToken')
   const handleCheckInFlow = () => {
     if (!isCheckedIn) {
       setShowAuthModal(true);
@@ -259,7 +281,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
                   isIOS && styles.iosButton,
                   isLoggingOut && styles.logoutButtonDisabled
                 ]}
-                onPress={handleLogout}
+                onPress={()=>{setShowAlert(true)}}
                 activeOpacity={0.7}
                 disabled={isLoggingOut}
               >
@@ -537,7 +559,12 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           </View>
         </View>
       </Modal>
-
+       <ConfirmationAlert
+        visible={showAlert}
+        isCheckedIn={isCheckedIn}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowAlert(false)}
+      />
       {/* Footer Mantra */}
       <View style={styles.footer}>
         <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>

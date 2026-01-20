@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, StatusBar, TouchableOpacity, Platform } from 'react-native';
+import { 
+  View, 
+  StyleSheet, 
+  StatusBar, 
+  TouchableOpacity, 
+  Platform, 
+  ActivityIndicator 
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   Power, 
   MapPin, 
@@ -19,7 +27,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ZoneScreen from '../screens/ZoneScreen';
 import AlertScreen from '../screens/AlertScreen';
-import SupervisorScreen from '../screens/SupervisorScreen'; // Make sure to create this file
+import SupervisorScreen from '../screens/SupervisorScreen';
 
 // Types
 export type RootStackParamList = {
@@ -65,12 +73,11 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
         name="Home" 
         children={() => <HomeScreen onLogout={onLogout} />}
         options={{
-          tabBarIcon: ({ color }) =><House size={22} color={color}/>,
+          tabBarIcon: ({ color }) => <House size={22} color={color}/>,
         }}
       />
       <Tab.Screen 
         name="Zone" 
-        // component={View}
         children={() => <ZoneScreen />} 
         options={{
           tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
@@ -90,8 +97,7 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
       />
       <Tab.Screen 
         name="Alerts" 
-        // component={View} 
-         children={() => <AlertScreen />} 
+        children={() => <AlertScreen />} 
         options={{
           tabBarIcon: ({ color }) => <Bell size={22} color={color} />,
         }}
@@ -108,8 +114,7 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
 };
 
 /**
- * Bottom Tab Navigator for SUPERVISORS (Optional: if they also need tabs)
- * If they only need one screen, you can skip this and point directly to SupervisorScreen
+ * Bottom Tab Navigator for SUPERVISORS
  */
 const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
   return (
@@ -151,26 +156,84 @@ const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
  * Main App Navigator with Auth Logic
  */
 const AppNavigator = () => {
-  // role can be 'driver', 'supervisor', or null
+  // States for authentication
   const [auth, setAuth] = useState<{ isLoggedIn: boolean; role: 'driver' | 'supervisor' | null }>({
     isLoggedIn: false,
     role: null,
   });
+  
+  // State for checking initial token
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
+
+  // Check for token on app start
+  useEffect(() => {
+    checkExistingToken();
+  }, []);
+
+  const checkExistingToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const userRole = await AsyncStorage.getItem('userType');
+      if (token) {
+        console.log('Token found, auto-logging in...');
+        console.log(token,'token navigator')
+        console.log(userRole,'role navigator')
+        // Try to get user data to determine role
+        const userDataString = await AsyncStorage.getItem('userData');
+        let role = userRole; // Default to driver
+        
+        // if (userDataString) {
+          // try {
+            
+          //   if (userRole === 'driver' || userRole === 'supervisor') {
+          //     role = userRole;
+              
+          //   }
+          // } catch (error) {
+          //   console.log('Error parsing userData, using default role');
+          // }
+          // console.log(role,'role navigator ____')
+        // }
+        
+        // Set auth state to logged in
+        setAuth({ 
+          isLoggedIn: true, 
+          role 
+        });
+      }
+    } catch (error) {
+      console.error('Error checking token:', error);
+    } finally {
+      setIsCheckingToken(false);
+    }
+  };
 
   const handleLogin = (role: 'driver' | 'supervisor') => {
     setAuth({ isLoggedIn: true, role });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear AsyncStorage on logout
+    await AsyncStorage.multiRemove(['userToken', 'userData']);
     setAuth({ isLoggedIn: false, role: null });
   };
 
+  // Show loading screen while checking token
+  if (isCheckingToken) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <ActivityIndicator size="large" color="#D97706" />
+      </View>
+    );
+  }
+console.log(auth.role,'navigator Role++++')
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!auth.isLoggedIn ? (
-          // Login Flow
+          // Login Flow - only show if not logged in
           <Stack.Screen name="LoginScreen">
             {(props) => (
               <LoginScreen 
@@ -180,12 +243,12 @@ const AppNavigator = () => {
             )}
           </Stack.Screen>
         ) : auth.role === 'supervisor' ? (
-          // Supervisor Flow
+          // Supervisor Flow - redirect directly if supervisor
           <Stack.Screen name="SupervisorStack">
             {() => <SupervisorTabNavigator onLogout={handleLogout} />}
           </Stack.Screen>
         ) : (
-          // Driver Flow
+          // Driver Flow - redirect directly if driver
           <Stack.Screen name="MainTabs">
             {() => <TabNavigator onLogout={handleLogout} />}
           </Stack.Screen>
@@ -200,9 +263,9 @@ const navStyles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     height: Platform.OS === 'ios' ? 90 : 70,
-    backgroundColor: '#5d0e0aff',
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
+    backgroundColor: 'rgb(157, 20, 12)',
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
     borderTopWidth: 0,
     paddingBottom: Platform.OS === 'ios' ? 30 : 12,
     paddingTop: 10,
@@ -238,6 +301,15 @@ const navStyles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
   }
+});
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgb(121, 18, 12)',
+  },
 });
 
 export default AppNavigator;

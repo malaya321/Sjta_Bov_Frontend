@@ -68,9 +68,9 @@ const LoginScreen = ({
       const token = await AsyncStorage.getItem('userToken');
       const userData = await AsyncStorage.getItem('userData');
       
-      if (token && userData) {
-        const parsedData = JSON.parse(userData);
-        console.log('Found existing login:', parsedData);
+      if (token) {
+        // const parsedData = JSON.parse(userData);
+        console.log('Found existing login:', token);
         // Auto-login or show welcome back message
       }
     } catch (error) {
@@ -104,8 +104,10 @@ const LoginScreen = ({
         // You can perform additional actions here if needed
         
         // Extract role from response
-        const role = data?.data?.role_name?.toLowerCase();
-        
+       
+        const role = data?.role_name?.toLowerCase();
+        //  console.log(role,"role after success")
+         onLogin(role as 'driver' | 'supervisor');
         // Navigate based on role
         if (role === 'driver' || role === 'supervisor') {
           // Add a small delay for better UX
@@ -129,13 +131,13 @@ const LoginScreen = ({
 
   // Determine if we should show loading state
   const isLoading = loginMutation.isPending;
-  const isSuccess = loginMutation.isSuccess;
+  // const isSuccess = loginMutation.isSuccess;
 
   // Success Screen View
-  if (isSuccess) {
-    const role = loginMutation.data?.data?.role_name?.toLowerCase() || 'user';
-    const userName = loginMutation.data?.data?.user?.name || 'User';
-    onLogin(role as 'driver' | 'supervisor')
+  // if (isSuccess) {
+  //   const role = loginMutation.data?.data?.role_name?.toLowerCase() || 'user';
+  //   const userName = loginMutation.data?.data?.user?.name || 'User';
+  //   onLogin(role as 'driver' | 'supervisor')
     // return (
     //   <SafeAreaView style={styles.successContainer}>
     //     <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -173,7 +175,7 @@ const LoginScreen = ({
     //     </View>
     //   </SafeAreaView>
     // );
-  }
+  // }
 
   return (
     <SafeAreaView style={styles.container}>
