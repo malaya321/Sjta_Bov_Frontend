@@ -35,14 +35,14 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { useLogout } from '../../hooks/useAuth';
-import { ConfirmationAlert, confirmationAlert } from '../../components/ConfirmationAlert';
+import { ConfirmationAlert } from '../../components/ConfirmationAlert';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
 const isSmallDevice = width < 375;
 
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
-  const [isCheckedIn, setIsCheckedIn] = useState(true);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authStep, setAuthStep] = useState(1);
   const [vehicleStatus, setVehicleStatus] = useState('Idle');
@@ -50,6 +50,8 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [batteryText, setBatteryText] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
+   const [showCheckoutAlert, setShowCheckoutAlert] = useState(false);
+  
   
   // Use the logout mutation hook
   const logoutMutation = useLogout();
@@ -75,6 +77,12 @@ const confirmLogout= async()=>{
               
               // Call the parent logout function after successful logout
               onLogout();
+    }
+    const confirmCheckout=()=>{
+      // console.log('checkout clicked')
+      setIsCheckedIn(false);
+              setVehicleStatus('Idle');
+              setShowCheckoutAlert(false);
     }
   // const handleLogout = () => {
     // Alert.alert(
@@ -141,27 +149,28 @@ console.log(userToken,'userToken')
       setShowAuthModal(true);
       setAuthStep(1);
     } else {
-      Alert.alert(
-        'Check Out',
-        'Are you sure you want to check out?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => console.log('Cancel Pressed')
-          },
-          {
-            text: 'Check Out',
-            style: 'destructive',
-            onPress: () => {
-              setIsCheckedIn(false);
-              setVehicleStatus('Idle');
-              Alert.alert('Success', 'You have successfully checked out!');
-            }
-          }
-        ],
-        { cancelable: true }
-      );
+      setShowCheckoutAlert(true);
+      // Alert.alert(
+      //   'Check Out',
+      //   'Are you sure you want to check out?',
+      //   [
+      //     {
+      //       text: 'Cancel',
+      //       style: 'cancel',
+      //       onPress: () => console.log('Cancel Pressed')
+      //     },
+      //     {
+      //       text: 'Check Out',
+      //       style: 'destructive',
+      //       onPress: () => {
+      //         setIsCheckedIn(false);
+      //         setVehicleStatus('Idle');
+      //         Alert.alert('Success', 'You have successfully checked out!');
+      //       }
+      //     }
+      //   ],
+      //   { cancelable: true }
+      // );
     }
   };
 
@@ -173,18 +182,18 @@ console.log(userToken,'userToken')
       setIsCheckedIn(true);
       setVehicleStatus('Running');
       setBatteryText('');
-      Alert.alert('Success', 'You have successfully checked in!');
+      // Alert.alert('Success', 'You have successfully checked in!');
     }
   };
 
   const handleStatusChange = (status: string) => {
     if (isCheckedIn) {
       setVehicleStatus(status);
-      Alert.alert(
-        'Status Updated',
-        `Vehicle status changed to ${status}`,
-        [{ text: 'OK' }]
-      );
+      // Alert.alert(
+      //   'Status Updated',
+      //   `Vehicle status changed to ${status}`,
+      //   [{ text: 'OK' }]
+      // );
     }
   };
 
@@ -565,6 +574,15 @@ console.log(userToken,'userToken')
         onConfirm={confirmLogout}
         onCancel={() => setShowAlert(false)}
       />
+         <ConfirmationAlert
+         title='Check Out'
+         message='Are you sure you want to check out?'
+         confirmText='Check Out'
+        visible={showCheckoutAlert}
+        isCheckedIn={isCheckedIn}
+        onConfirm={confirmCheckout}
+        onCancel={() => setShowCheckoutAlert(false)}
+      />
       {/* Footer Mantra */}
       <View style={styles.footer}>
         <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>
@@ -783,10 +801,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     borderTopColor: 'transparent',
-    animationDuration: '1s',
-    animationIterationCount: 'infinite',
-    animationTimingFunction: 'linear',
-    animationName: { '0%': { transform: [{ rotate: '0deg' }] }, '100%': { transform: [{ rotate: '360deg' }] } },
+    // animationDuration: '1s',
+    // animationIterationCount: 'infinite',
+    // animationTimingFunction: 'linear',
+    // animationName: { '0%': { transform: [{ rotate: '0deg' }] }, '100%': { transform: [{ rotate: '360deg' }] } },
   },
   mainContent: {
     padding: isSmallDevice ? 16 : 20,
@@ -1233,8 +1251,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  idTextActive:{color:'#22C55E'},
-  idBadgeActive:{backgroundColor:''},
+  idTextActive:{color:'#038934'},
+  idBadgeActive:{backgroundColor:'#0b8d3b1f'},
 });
 
 export default HomeScreen;

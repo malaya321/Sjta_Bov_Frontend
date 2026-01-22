@@ -30,7 +30,7 @@ export const ConfirmationAlert: React.FC<ConfirmLogoutAlertProps> = ({
   cancelText = 'Cancel',
 }) => {
   const handleConfirm = () => {
-    if (isCheckedIn) {
+    if (isCheckedIn && (title == 'Logout')) {
       // Just show the message in the alert, don't proceed
       return;
     }
@@ -67,7 +67,7 @@ export const ConfirmationAlert: React.FC<ConfirmLogoutAlertProps> = ({
             <View style={styles.messageContainer}>
               <Text style={styles.message}>{message}</Text>
               
-              {isCheckedIn && (
+              {isCheckedIn && (title == 'Logout') && (
                 <View style={styles.warningContainer}>
                   <Text style={styles.warningText}>
                     You need to check out first.
@@ -90,14 +90,14 @@ export const ConfirmationAlert: React.FC<ConfirmLogoutAlertProps> = ({
               <TouchableOpacity
                 style={[
                   styles.confirmButton,
-                  isCheckedIn && styles.disabledButton,
+                  isCheckedIn && (title == 'Logout') && styles.disabledButton,
                 ]}
                 onPress={handleConfirm}
-                disabled={isCheckedIn}
+                disabled={isCheckedIn && (title == 'Logout')}
               >
                 <Text style={[
                   styles.confirmButtonText,
-                  isCheckedIn && styles.disabledButtonText,
+                  isCheckedIn && (title == 'Logout') && styles.disabledButtonText,
                 ]}>
                   {confirmText}
                 </Text>

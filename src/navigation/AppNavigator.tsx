@@ -157,7 +157,7 @@ const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
  */
 const AppNavigator = () => {
   // States for authentication
-  const [auth, setAuth] = useState<{ isLoggedIn: boolean; role: 'driver' | 'supervisor' | null }>({
+  const [auth, setAuth] = useState<{ isLoggedIn: boolean; role: any }>({
     isLoggedIn: false,
     role: null,
   });

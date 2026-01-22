@@ -46,7 +46,7 @@ export const authService = {
         await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
         
         // Combine user data with role if needed
-        const userData = user ? { ...user, role_name } : null;
+        const userData:any = user ? { ...user, role_name } : null;
         if (userData) {
           await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
         }
@@ -64,7 +64,7 @@ export const authService = {
         if (token) {
           await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
           
-          const userData = user ? { ...user, role_name } : null;
+          const userData:any = user ? { ...user, role_name } : null;
           if (userData) {
             await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
           }
@@ -106,7 +106,7 @@ export const authService = {
       await Promise.all([
         AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
         AsyncStorage.removeItem(USER_STORAGE_KEY),
-        api.setAuthToken?.(null), // Optional chaining in case method doesn't exist
+        api.setAuthToken?.(null), 
       ]);
     }
   },

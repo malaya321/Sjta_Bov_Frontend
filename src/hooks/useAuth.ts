@@ -21,10 +21,10 @@ export const useLogin = () => {
       const response = await authService.login(credentials);
       return response;
     },
-    onSuccess: async (data: LoginResponse) => {
+    onSuccess: async (data: any) => {
       // Save token to AsyncStorage
       const token = data?.token;
-      const userType = data?.role_name;
+      const userType:any = data?.role_name;
       // console.log(userType,'userType++++')
       if (token) {
         await AsyncStorage.setItem('userToken', token);

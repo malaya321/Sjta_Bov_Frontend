@@ -86,7 +86,7 @@ const LoginScreen = ({
 
   const handleLogin = (values: LoginFormValues) => {
     // Prepare the complete login data with static request_type
-    const loginData = {
+    const loginData:any = {
       request_type: 'mobile', // Static string as requested
       username: values.userId, // Using mobile field as per request_type
       password: values.password,
