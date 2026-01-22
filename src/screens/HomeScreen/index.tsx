@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import {
   User,
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import { useLogout } from '../../hooks/useAuth';
 import { ConfirmationAlert } from '../../components/ConfirmationAlert';
+import FaceDetectionComponent from '../../components/FaceDetection';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -50,8 +52,10 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [batteryText, setBatteryText] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
-   const [showCheckoutAlert, setShowCheckoutAlert] = useState(false);
-  
+  const [showCheckoutAlert, setShowCheckoutAlert] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<any>(null);
+  const [faceDetected, setFaceDetected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Use the logout mutation hook
   const logoutMutation = useLogout();
@@ -71,106 +75,53 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     'Fault': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
     'Idle': { bg: '#F1F5F9', text: '#64748B', icon: '#94A3B8' }
   };
-const confirmLogout= async()=>{
-       // Trigger logout mutation
-              await logoutMutation.mutateAsync();
-              
-              // Call the parent logout function after successful logout
-              onLogout();
-    }
-    const confirmCheckout=()=>{
-      // console.log('checkout clicked')
-      setIsCheckedIn(false);
-              setVehicleStatus('Idle');
-              setShowCheckoutAlert(false);
-    }
-  // const handleLogout = () => {
-    // Alert.alert(
-    //   'Logout',
-    //   'Are you sure you want to logout?',
-    //   [
-    //     {
-    //       text: 'Cancel',
-    //       style: 'cancel',
-    //       onPress: () => console.log('Logout cancelled')
-    //     },
-    //     {
-    //       text: 'Logout',
-    //       style: 'destructive',
-    //       onPress: async () => {
-    //         try {
-    //           // If user is checked in, prompt for check-out first
-    //           if (isCheckedIn) {
-    //             Alert.alert(
-    //               'Check Out Required',
-    //               'Please check out from your shift before logging out.',
-    //               [{ text: 'OK' }]
-    //             );
-    //             return;
-    //           }
 
-    //           // Trigger logout mutation
-    //           await logoutMutation.mutateAsync();
-              
-    //           // Call the parent logout function after successful logout
-    //           onLogout();
-              
-    //         } catch (error) {
-    //           console.error('Logout error:', error);
-    //           Alert.alert(
-    //             'Logout Failed',
-    //             'There was an issue logging out. Please try again.',
-    //             [{ text: 'OK' }]
-    //           );
-    //         }
-    //       }
-    //     }
-    //   ],
-    //   { cancelable: true }
-    // );
-    // const confirmLogout= async()=>{
-    //    // Trigger logout mutation
-    //           await logoutMutation.mutateAsync();
-              
-    //           // Call the parent logout function after successful logout
-    //           onLogout();
-    // }
-    //  confirmationAlert({
-    //   isCheckedIn,
-    //   onConfirm: confirmLogout,
-    // });
-  // };
-const userData =  AsyncStorage.getItem('userType');
-const userToken =  AsyncStorage.getItem('userToken');
-console.log(userData,'userData')
-console.log(userToken,'userToken')
+  const confirmLogout = async() => {
+    // Trigger logout mutation
+    await logoutMutation.mutateAsync();
+    
+    // Call the parent logout function after successful logout
+    onLogout();
+  };
+
+  const confirmCheckout = () => {
+    setIsCheckedIn(false);
+    setVehicleStatus('Idle');
+    setShowCheckoutAlert(false);
+  };
+
+  const userData = AsyncStorage.getItem('userType');
+  const userToken = AsyncStorage.getItem('userToken');
+  console.log(userData,'userData')
+  console.log(userToken,'userToken')
+
+  const handleFaceDetectionSuccess = (image: any) => {
+    setCapturedImage(image);
+    setFaceDetected(true);
+    
+    Alert.alert(
+      'Face Detected!',
+      'Face verified successfully. Proceeding to next step...',
+      [{ 
+        text: 'Continue', 
+        onPress: () => {
+          setTimeout(() => {
+            nextAuthStep();
+            setFaceDetected(false);
+          }, 500);
+        }
+      }]
+    );
+  };
+
   const handleCheckInFlow = () => {
     if (!isCheckedIn) {
       setShowAuthModal(true);
       setAuthStep(1);
+      setCapturedImage(null);
+      setFaceDetected(false);
     } else {
       setShowCheckoutAlert(true);
-      // Alert.alert(
-      //   'Check Out',
-      //   'Are you sure you want to check out?',
-      //   [
-      //     {
-      //       text: 'Cancel',
-      //       style: 'cancel',
-      //       onPress: () => console.log('Cancel Pressed')
-      //     },
-      //     {
-      //       text: 'Check Out',
-      //       style: 'destructive',
-      //       onPress: () => {
-      //         setIsCheckedIn(false);
-      //         setVehicleStatus('Idle');
-      //         Alert.alert('Success', 'You have successfully checked out!');
-      //       }
-      //     }
-      //   ],
-      //   { cancelable: true }
-      // );
     }
   };
 
@@ -182,7 +133,8 @@ console.log(userToken,'userToken')
       setIsCheckedIn(true);
       setVehicleStatus('Running');
       setBatteryText('');
-      // Alert.alert('Success', 'You have successfully checked in!');
+      setCapturedImage(null);
+      Alert.alert('Success', 'You have successfully checked in!');
     }
   };
 
@@ -499,10 +451,14 @@ console.log(userToken,'userToken')
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Verification Step {authStep}/2</Text>
               <TouchableOpacity
-                onPress={() => setShowAuthModal(false)}
+                onPress={() => {
+                  setShowAuthModal(false);
+                  setCapturedImage(null);
+                  setFaceDetected(false);
+                }}
                 style={styles.closeButton}
                 activeOpacity={0.7}
-                disabled={isLoggingOut}
+                disabled={isLoggingOut || isLoading}
               >
                 <X size={isSmallDevice ? 20 : 24} color="#94A3B8" />
               </TouchableOpacity>
@@ -513,24 +469,56 @@ console.log(userToken,'userToken')
                 <>
                   <View style={[
                     styles.faceAuthContainer,
-                    isIOS && styles.iosBorder
+                    isIOS && styles.iosBorder,
+                    faceDetected && styles.faceDetectedContainer
                   ]}>
-                    <User size={isSmallDevice ? 50 : 60} color="#E2E8F0" />
+                    {capturedImage ? (
+                      <Image 
+                        source={{ uri: capturedImage.uri }} 
+                        style={styles.capturedImage}
+                      />
+                    ) : (
+                      <User size={isSmallDevice ? 50 : 60} color="#E2E8F0" />
+                    )}
+                    {faceDetected && (
+                      <View style={styles.successOverlay}>
+                        <CheckCircle2 size={isSmallDevice ? 24 : 28} color="#22C55E" />
+                      </View>
+                    )}
                   </View>
+                  
                   <Text style={styles.stepDescription}>
-                    Position your face within the frame
+                    {capturedImage 
+                      ? 'Face detected! Tap continue to proceed'
+                      : 'Capture your face for verification'
+                    }
                   </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.authButton,
-                      isIOS && styles.iosPrimaryButton
-                    ]}
-                    onPress={nextAuthStep}
-                    activeOpacity={0.7}
-                    disabled={isLoggingOut}
-                  >
-                    <Text style={styles.authButtonText}>Scan Face</Text>
-                  </TouchableOpacity>
+                  
+                  <FaceDetectionComponent 
+                    onSuccess={handleFaceDetectionSuccess}
+                  />
+                  
+                  {capturedImage && !faceDetected && (
+                    <Text style={styles.instructionText}>
+                      Please position your face clearly in the frame
+                    </Text>
+                  )}
+                  
+                  {faceDetected && (
+                    <TouchableOpacity
+                      style={[
+                        styles.continueButton,
+                        isIOS && styles.iosPrimaryButton
+                      ]}
+                      onPress={() => nextAuthStep()}
+                      activeOpacity={0.7}
+                      disabled={isLoggingOut || isLoading}
+                    >
+                      <Text style={styles.continueButtonText}>
+                        Continue to Next Step
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               ) : (
                 <>
@@ -545,6 +533,7 @@ console.log(userToken,'userToken')
                     ]}
                     placeholder="Enter battery status remarks..."
                     placeholderTextColor="#94A3B8"
+                    value={batteryText}
                     onChangeText={setBatteryText}
                     multiline
                     numberOfLines={4}
@@ -568,21 +557,24 @@ console.log(userToken,'userToken')
           </View>
         </View>
       </Modal>
-       <ConfirmationAlert
+      
+      <ConfirmationAlert
         visible={showAlert}
         isCheckedIn={isCheckedIn}
         onConfirm={confirmLogout}
         onCancel={() => setShowAlert(false)}
       />
-         <ConfirmationAlert
-         title='Check Out'
-         message='Are you sure you want to check out?'
-         confirmText='Check Out'
+      
+      <ConfirmationAlert
+        title='Check Out'
+        message='Are you sure you want to check out?'
+        confirmText='Check Out'
         visible={showCheckoutAlert}
         isCheckedIn={isCheckedIn}
         onConfirm={confirmCheckout}
         onCancel={() => setShowCheckoutAlert(false)}
       />
+      
       {/* Footer Mantra */}
       <View style={styles.footer}>
         <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>
@@ -801,10 +793,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
     borderTopColor: 'transparent',
-    // animationDuration: '1s',
-    // animationIterationCount: 'infinite',
-    // animationTimingFunction: 'linear',
-    // animationName: { '0%': { transform: [{ rotate: '0deg' }] }, '100%': { transform: [{ rotate: '360deg' }] } },
   },
   mainContent: {
     padding: isSmallDevice ? 16 : 20,
@@ -1134,16 +1122,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   faceAuthContainer: {
-    width: isSmallDevice ? 90 : 100,
-    height: isSmallDevice ? 90 : 100,
-    borderRadius: isSmallDevice ? 18 : 20,
+    width: isSmallDevice ? 120 : 140,
+    height: isSmallDevice ? 120 : 140,
+    borderRadius: isSmallDevice ? 20 : 24,
     backgroundColor: '#F8FAFC',
-    borderStyle: 'dashed',
     borderWidth: 2,
+    borderStyle: 'dashed',
     borderColor: '#D97706',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: isSmallDevice ? 16 : 20,
+    overflow: 'hidden',
+  },
+  faceDetectedContainer: {
+    borderStyle: 'solid',
+    borderColor: '#22C55E',
+  },
+  capturedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  successOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 20,
+    padding: 4,
   },
   stepDescription: {
     fontSize: isSmallDevice ? 12 : 14,
@@ -1152,15 +1157,23 @@ const styles = StyleSheet.create({
     marginBottom: isSmallDevice ? 16 : 20,
     fontFamily: isIOS ? 'System' : 'sans-serif',
   },
-  authButton: {
-    backgroundColor: '#D97706',
+  instructionText: {
+    fontSize: isSmallDevice ? 11 : 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 10,
+    fontFamily: isIOS ? 'System' : 'sans-serif',
+  },
+  continueButton: {
+    backgroundColor: '#22C55E',
     paddingHorizontal: isSmallDevice ? 32 : 40,
     paddingVertical: isSmallDevice ? 10 : 12,
     borderRadius: isSmallDevice ? 10 : 12,
     width: '100%',
     alignItems: 'center',
+    marginTop: isSmallDevice ? 16 : 20,
   },
-  authButtonText: {
+  continueButtonText: {
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: isSmallDevice ? 14 : 16,
@@ -1251,8 +1264,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  idTextActive:{color:'#038934'},
-  idBadgeActive:{backgroundColor:'#0b8d3b1f'},
+  idTextActive: {
+    color: '#038934',
+  },
+  idBadgeActive: {
+    backgroundColor: '#0b8d3b1f',
+  },
 });
 
 export default HomeScreen;
