@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
-  Power, 
   MapPin, 
   Bell, 
   Settings, 
@@ -28,16 +27,32 @@ import HomeScreen from '../screens/HomeScreen';
 import ZoneScreen from '../screens/ZoneScreen';
 import AlertScreen from '../screens/AlertScreen';
 import SupervisorScreen from '../screens/SupervisorScreen';
+import ActiveDriversScreen from '../screens/ActiveDriversScreen';
+import AvailableBovsScreen from '../screens/AvailableBovScreen';
 
 // Types
 export type RootStackParamList = {
   LoginScreen: undefined;
   MainTabs: undefined;
   SupervisorStack: undefined;
+  ActiveDriver: undefined; // Add to root stack
+  AvailableBov:undefined;
+};
+
+export type MainTabsParamList = {
+  Home: undefined;
+  Zone: undefined;
+  Action: undefined;
+  Alerts: undefined;
+  More: undefined;
+  Status: undefined;
+  Drivers: undefined;
+  Roster: undefined;
+  
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabsParamList>();
 
 /**
  * Custom Central Button for the Floating Effect
@@ -57,7 +72,14 @@ const CentralButton = ({ children, onPress }: any) => (
 /**
  * Bottom Tab Navigator for DRIVERS
  */
-const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
+const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () => void }) => {
+  
+  // Handler function that navigates to ActiveDriver
+  const handleActiveDriversPress = () => {
+    // Use the root navigation to navigate to ActiveDriver
+    navigation.navigate('ActiveDriver');
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -71,14 +93,19 @@ const TabNavigator = ({ onLogout }: { onLogout: () => void }) => {
     >
       <Tab.Screen 
         name="Home" 
-        children={() => <HomeScreen onLogout={onLogout} />}
+        children={() => <HomeScreen 
+          onLogout={onLogout} 
+          // onActiveDriversPress={handleActiveDriversPress} 
+        />}
         options={{
           tabBarIcon: ({ color }) => <House size={22} color={color}/>,
         }}
       />
       <Tab.Screen 
         name="Zone" 
-        children={() => <ZoneScreen />} 
+        children={() => <ZoneScreen 
+          // onActiveDriversPress={handleActiveDriversPress} 
+        />} 
         options={{
           tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
         }}
@@ -134,6 +161,7 @@ const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
           tabBarIcon: ({ color }) => <ClipboardList size={22} color={color} />,
         }}
       />
+      
       <Tab.Screen 
         name="Drivers" 
         component={View} 
@@ -176,26 +204,9 @@ const AppNavigator = () => {
       const userRole = await AsyncStorage.getItem('userType');
       if (token) {
         console.log('Token found, auto-logging in...');
-        console.log(token,'token navigator')
-        console.log(userRole,'role navigator')
-        // Try to get user data to determine role
-        const userDataString = await AsyncStorage.getItem('userData');
-        let role = userRole; // Default to driver
         
-        // if (userDataString) {
-          // try {
-            
-          //   if (userRole === 'driver' || userRole === 'supervisor') {
-          //     role = userRole;
-              
-          //   }
-          // } catch (error) {
-          //   console.log('Error parsing userData, using default role');
-          // }
-          // console.log(role,'role navigator ____')
-        // }
+        let role = userRole?.toLowerCase();
         
-        // Set auth state to logged in
         setAuth({ 
           isLoggedIn: true, 
           role 
@@ -213,7 +224,6 @@ const AppNavigator = () => {
   };
 
   const handleLogout = async () => {
-    // Clear AsyncStorage on logout
     await AsyncStorage.multiRemove(['userToken', 'userData']);
     setAuth({ isLoggedIn: false, role: null });
   };
@@ -227,13 +237,13 @@ const AppNavigator = () => {
       </View>
     );
   }
-console.log(auth.role,'navigator Role++++')
+
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!auth.isLoggedIn ? (
-          // Login Flow - only show if not logged in
+          // Login Flow
           <Stack.Screen name="LoginScreen">
             {(props) => (
               <LoginScreen 
@@ -243,15 +253,30 @@ console.log(auth.role,'navigator Role++++')
             )}
           </Stack.Screen>
         ) : auth.role === 'supervisor' ? (
-          // Supervisor Flow - redirect directly if supervisor
-          <Stack.Screen name="SupervisorStack">
+          // Supervisor Flow
+
+          <>
+           <Stack.Screen name="SupervisorStack">
             {() => <SupervisorTabNavigator onLogout={handleLogout} />}
           </Stack.Screen>
+           <Stack.Screen 
+              name="ActiveDriver" 
+              component={ActiveDriversScreen}
+            />
+            <Stack.Screen 
+              name="AvailableBov" 
+              component={AvailableBovsScreen}
+            />
+          </>
+         
         ) : (
-          // Driver Flow - redirect directly if driver
-          <Stack.Screen name="MainTabs">
-            {() => <TabNavigator onLogout={handleLogout} />}
-          </Stack.Screen>
+          // Driver Flow - TabNavigator is inside MainTabs screen
+          <>
+            <Stack.Screen name="MainTabs">
+              {(props) => <TabNavigator {...props} onLogout={handleLogout} />}
+            </Stack.Screen>
+           
+          </>
         )}
       </Stack.Navigator>
     </>
