@@ -22,7 +22,7 @@ class CheckinService {
       console.log('📤 Sending check-in request');
       // ✅ Using the centralized api instance - token is automatically added by interceptor
       const response = await api.post(
-        '/face/login',
+        '/check-in',
         formData,
         {
           headers: {

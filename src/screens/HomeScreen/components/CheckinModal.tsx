@@ -13,8 +13,10 @@ import {
   Platform,
   SafeAreaView,
   KeyboardAvoidingView,
+  PermissionsAndroid,
 } from 'react-native';
-import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle } from 'lucide-react-native';
+import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle, MapPin } from 'lucide-react-native';
+import Geolocation from 'react-native-geolocation-service';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
 
 const { width } = Dimensions.get('window');
@@ -24,6 +26,12 @@ type ImageFile = {
   type: string;
   name: string;
   size?: number;
+};
+
+type LocationType = {
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
 };
 
 type CheckinModalProps = {
@@ -66,18 +74,148 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
     message: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [location, setLocation] = useState<LocationType>({
+    latitude: null,
+    longitude: null,
+    accuracy: null
+  });
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
+console.log(location,'location manoj')
+  // Check and request location permission
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'ios') {
+      // For iOS
+      const status = await Geolocation.requestAuthorization('whenInUse');
+      return status === 'granted';
+    } else {
+      // For Android
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'This app needs access to your location for check-ins.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+  };
+
+  // Check if location permission is already granted
+  const checkLocationPermission = async () => {
+    if (Platform.OS === 'ios') {
+      const status = await Geolocation.requestAuthorization('whenInUse');
+      setHasLocationPermission(status === 'granted');
+    } else {
+      const granted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      setHasLocationPermission(granted);
+    }
+  };
+
+  // Get current location
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    setLocationError(null);
+    
+    try {
+      // Check and request permission
+      const hasPermission = await requestLocationPermission();
+      
+      if (!hasPermission) {
+        throw new Error('Location permission denied. Please enable location services.');
+      }
+
+      return new Promise<LocationType>((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            const newLocation = {
+              latitude,
+              longitude,
+              accuracy
+            };
+            setLocation(newLocation);
+            setIsGettingLocation(false);
+            setHasLocationPermission(true);
+            resolve(newLocation);
+          },
+          (error) => {
+            setIsGettingLocation(false);
+            let errorMessage = 'Failed to get location';
+            
+            switch (error.code) {
+              case 1: // PERMISSION_DENIED
+                errorMessage = 'Location permission denied. Please enable location services in settings.';
+                setHasLocationPermission(false);
+                break;
+              case 2: // POSITION_UNAVAILABLE
+                errorMessage = 'Location information unavailable. Please check your GPS or network connection.';
+                break;
+              case 3: // TIMEOUT
+                errorMessage = 'Location request timed out. Please try again.';
+                break;
+              default:
+                errorMessage = error.message || 'Failed to get location';
+            }
+            
+            setLocationError(errorMessage);
+            reject(new Error(errorMessage));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 10000,
+            showLocationDialog: true,
+            forceRequestLocation: true
+          }
+        );
+      });
+    } catch (err: any) {
+      setIsGettingLocation(false);
+      setLocationError(err.message || 'Failed to get location');
+      throw err;
+    }
+  };
+
+  // Get location when modal opens or step changes to step 2
+  useEffect(() => {
+    if (visible && currentStep === 2) {
+      getCurrentLocation();
+    }
+  }, [visible, currentStep]);
+
+  // Check permission when modal opens
+  useEffect(() => {
+    if (visible) {
+      checkLocationPermission();
+    }
+  }, [visible]);
 
   // Reset states when modal opens
   useEffect(() => {
     if (visible) {
       setCurrentStep(1);
       setVerificationResult(null);
+      setLocation({ latitude: null, longitude: null, accuracy: null });
+      setLocationError(null);
+      setHasLocationPermission(false);
     }
   }, [visible]);
 
   const handleFaceCapture = (imageFile: ImageFile) => {
     onImageCaptured(imageFile);
-    setVerificationResult(null); // Reset verification result when new image is captured
+    setVerificationResult(null);
   };
 
   const handleVerifyImage = async () => {
@@ -87,6 +225,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
     }
 
     setIsVerifying(true);
+    setVerificationResult(null);
+    
     try {
       const formData = new FormData();
       formData.append('image', {
@@ -94,16 +234,22 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
         type: capturedImageFile.type || 'image/jpeg',
         name: capturedImageFile.name || `checkin_${Date.now()}.jpg`,
       } as any);
-      const res = await checkin(formData);
+      
+      // Call your verify API
+      const result = await verifyImage(formData);
+      
       setVerificationResult({
         success: true,
-        message: res.message || 'Identity verified successfully!'
+        message: result.message || 'Identity verified successfully!'
       });
+      
+      // Get location before proceeding to next step
+      await getCurrentLocation();
       
       // Auto-advance to next step after a short delay
       setTimeout(() => {
         setCurrentStep(2);
-      }, 1500);
+      }, 1000);
     } catch (err: any) {
       setVerificationResult({
         success: false,
@@ -121,6 +267,19 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       return;
     }
 
+    // Validate location
+    if (!location.latitude || !location.longitude) {
+      Alert.alert(
+        'Location Required',
+        'Please wait for location to be fetched or enable location services.',
+        [
+          { text: 'Retry', onPress: getCurrentLocation },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const formData = new FormData();
@@ -132,6 +291,13 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       
       formData.append('battery_remarks', batteryText);
       formData.append('battery_percentage', batteryLevel.toString());
+      formData.append('longitude', location.longitude.toString());
+      formData.append('latitude', location.latitude.toString());
+      
+      // Add accuracy if available
+      if (location.accuracy) {
+        formData.append('location_accuracy', location.accuracy.toString());
+      }
 
       const res = await checkin(formData);
       Alert.alert('Success', res.message || 'Check-in completed!', [
@@ -143,6 +309,60 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  const handleRefreshLocation = async () => {
+    await getCurrentLocation();
+  };
+
+  // Open settings to enable location
+  const openLocationSettings = () => {
+    if (Platform.OS === 'ios') {
+      // For iOS
+      Alert.alert(
+        'Enable Location',
+        'Please enable location services in your device settings to continue.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => {
+            // You can use Linking.openURL('app-settings:') here
+          }}
+        ]
+      );
+    } else {
+      // For Android
+      Alert.alert(
+        'Enable Location',
+        'Please enable location services in your device settings to continue.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => {
+            // You can use Linking.openURL('settings:') here
+          }}
+        ]
+      );
+    }
+  };
+
+  // Render location permission denied UI
+  const renderLocationPermissionDenied = () => (
+    <View style={styles.permissionDeniedCard}>
+      <AlertCircle size={24} color="#DC2626" />
+      <View style={styles.permissionDeniedTextContainer}>
+        <Text style={styles.permissionDeniedTitle}>
+          Location Access Required
+        </Text>
+        <Text style={styles.permissionDeniedDescription}>
+          This app needs location access to record your check-in location.
+        </Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.permissionButton}
+        onPress={openLocationSettings}
+      >
+        <Text style={styles.permissionButtonText}>Enable</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <Modal
@@ -248,6 +468,72 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
                   Select the current battery percentage of your vehicle.
                 </Text>
 
+                {/* Location Status Card */}
+                <View style={styles.locationCard}>
+                  <View style={styles.locationHeader}>
+                    <MapPin size={20} color="#64748B" />
+                    <Text style={styles.locationTitle}>Current Location</Text>
+                    <TouchableOpacity 
+                      onPress={handleRefreshLocation}
+                      disabled={isGettingLocation}
+                    >
+                      {isGettingLocation ? (
+                        <ActivityIndicator size="small" color="#3B82F6" />
+                      ) : (
+                        <Text style={styles.refreshText}>Refresh</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {!hasLocationPermission ? (
+                    renderLocationPermissionDenied()
+                  ) : isGettingLocation ? (
+                    <View style={styles.locationLoading}>
+                      <ActivityIndicator size="small" color="#64748B" />
+                      <Text style={styles.locationLoadingText}>
+                        Fetching your location...
+                      </Text>
+                    </View>
+                  ) : locationError ? (
+                    <View style={styles.locationError}>
+                      <AlertCircle size={16} color="#DC2626" />
+                      <Text style={styles.locationErrorText}>{locationError}</Text>
+                      <TouchableOpacity 
+                        style={styles.retryButton}
+                        onPress={getCurrentLocation}
+                      >
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : location.latitude && location.longitude ? (
+                    <View>
+                      <View style={styles.coordinatesContainer}>
+                        <View style={styles.coordinateItem}>
+                          <Text style={styles.coordinateLabel}>Latitude</Text>
+                          <Text style={styles.coordinateValue}>
+                            {location.latitude.toFixed(6)}
+                          </Text>
+                        </View>
+                        <View style={styles.coordinateItem}>
+                          <Text style={styles.coordinateLabel}>Longitude</Text>
+                          <Text style={styles.coordinateValue}>
+                            {location.longitude.toFixed(6)}
+                          </Text>
+                        </View>
+                      </View>
+                      {location.accuracy && (
+                        <Text style={styles.accuracyText}>
+                          Accuracy: ±{Math.round(location.accuracy)} meters
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={styles.locationPlaceholder}>
+                      Location will be fetched when you submit
+                    </Text>
+                  )}
+                </View>
+
                 <View style={styles.batteryGrid}>
                   {[20, 40, 60, 80, 100].map((level) => (
                     <TouchableOpacity
@@ -283,9 +569,10 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
               </View>
             )}
 
-            {error && (
+            {(error || locationError) && (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
+                <AlertCircle size={16} color="#DC2626" />
+                <Text style={styles.errorText}>{error || locationError}</Text>
               </View>
             )}
           </ScrollView>
@@ -307,8 +594,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
                 styles.primaryButton,
                 (currentStep === 1 || isSubmitting) && styles.buttonDisabled
               ]}
-              onPress={currentStep === 1 ? () => {} : handleSubmitCheckin}
-              disabled={currentStep === 1 || isSubmitting}
+              onPress={currentStep === 1 ? handleVerifyImage : handleSubmitCheckin}
+              disabled={currentStep === 1 ? isVerifying || !capturedImageFile : isSubmitting}
             >
               {isSubmitting ? (
                 <ActivityIndicator color="#FFF" />
@@ -397,20 +684,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   overlaySuccess: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 10,
   },
   overlayError: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 10,
   },
   overlayText: {
     marginTop: 12,
@@ -470,6 +768,127 @@ const styles = StyleSheet.create({
     color: '#166534',
     fontSize: 14,
     fontWeight: '600',
+  },
+  locationCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    flex: 1,
+    marginLeft: 8,
+  },
+  refreshText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  locationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationLoadingText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+  locationError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationErrorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    flex: 1,
+  },
+  permissionDeniedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
+  },
+  permissionDeniedTextContainer: {
+    flex: 1,
+  },
+  permissionDeniedTitle: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  permissionDeniedDescription: {
+    color: '#DC2626',
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  permissionButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  permissionButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  retryButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  retryButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  coordinatesContainer: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  coordinateItem: {
+    flex: 1,
+  },
+  coordinateLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  coordinateValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    backgroundColor: '#F1F5F9',
+    padding: 8,
+    borderRadius: 8,
+  },
+  accuracyText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  locationPlaceholder: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   batteryGrid: {
     flexDirection: 'row',
@@ -567,11 +986,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     padding: 12,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     color: '#DC2626',
     fontSize: 14,
-    textAlign: 'center',
+    flex: 1,
   },
 });
 
