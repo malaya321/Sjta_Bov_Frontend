@@ -29,7 +29,7 @@ import AlertScreen from '../screens/AlertScreen';
 import SupervisorScreen from '../screens/SupervisorScreen';
 import ActiveDriversScreen from '../screens/ActiveDriversScreen';
 import AvailableBovsScreen from '../screens/AvailableBovScreen';
-
+import CheckinScreen from '../screens/common';
 // Types
 export type RootStackParamList = {
   LoginScreen: undefined;
@@ -131,7 +131,7 @@ const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () 
       />
       <Tab.Screen 
         name="More" 
-        component={View} 
+        component={CheckinScreen} 
         options={{
           tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
