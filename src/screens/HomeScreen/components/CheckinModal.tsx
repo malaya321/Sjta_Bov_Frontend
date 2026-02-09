@@ -14,9 +14,11 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   PermissionsAndroid,
+  Image,
+  Linking,
 } from 'react-native';
 import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle, MapPin } from 'lucide-react-native';
-import Geolocation from 'react-native-geolocation-service';
+import Geolocation from '@react-native-community/geolocation';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
 
 const { width } = Dimensions.get('window');
@@ -48,7 +50,6 @@ type CheckinModalProps = {
   onBatteryTextChange: (text: string) => void;
   onBatteryLevelChange: (level: number) => void;
   onCheckinSuccess: () => void;
-  verifyImage: (formData: FormData) => Promise<any>;
   checkin: (formData: FormData) => Promise<any>;
 };
 
@@ -63,17 +64,15 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   onBatteryTextChange,
   onBatteryLevelChange,
   onCheckinSuccess,
-  verifyImage,
   checkin,
   error,
 }) => {
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState<LocationType>({
     latitude: null,
     longitude: null,
@@ -82,16 +81,15 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
-console.log(location,'location manoj')
-  // Check and request location permission
-  const requestLocationPermission = async () => {
-    if (Platform.OS === 'ios') {
-      // For iOS
-      const status = await Geolocation.requestAuthorization('whenInUse');
-      return status === 'granted';
-    } else {
-      // For Android
-      try {
+
+  // Request location permission
+  const requestLocationPermission = async (): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'ios') {
+        // For iOS, we'll request permission through the Geolocation API
+        return true; // The permission dialog will show when getCurrentPosition is called
+      } else {
+        // For Android
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
@@ -102,41 +100,74 @@ console.log(location,'location manoj')
             buttonPositive: 'OK',
           }
         );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
+        
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          setHasLocationPermission(true);
+          return true;
+        } else {
+          setHasLocationPermission(false);
+          return false;
+        }
       }
+    } catch (err) {
+      console.warn('Location permission error:', err);
+      setHasLocationPermission(false);
+      return false;
     }
   };
 
-  // Check if location permission is already granted
-  const checkLocationPermission = async () => {
-    if (Platform.OS === 'ios') {
-      const status = await Geolocation.requestAuthorization('whenInUse');
-      setHasLocationPermission(status === 'granted');
-    } else {
-      const granted = await PermissionsAndroid.check(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-      );
-      setHasLocationPermission(granted);
+  // Check location permission
+  const checkLocationPermission = async (): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        setHasLocationPermission(granted);
+        return granted;
+      } else {
+        // For iOS, we assume permission is not granted initially
+        // The actual permission check happens when we try to get location
+        setHasLocationPermission(false);
+        return false;
+      }
+    } catch (err) {
+      console.warn('Permission check error:', err);
+      setHasLocationPermission(false);
+      return false;
     }
   };
 
   // Get current location
-  const getCurrentLocation = async () => {
-    setIsGettingLocation(true);
-    setLocationError(null);
-    
-    try {
-      // Check and request permission
-      const hasPermission = await requestLocationPermission();
-      
+  const getCurrentLocation = async (): Promise<LocationType> => {
+  setIsGettingLocation(true);
+  setLocationError(null);
+  
+  return new Promise((resolve, reject) => {
+    // First check/request permission
+    requestLocationPermission().then(hasPermission => {
       if (!hasPermission) {
-        throw new Error('Location permission denied. Please enable location services.');
+        const error = new Error('Location permission denied. Please enable location services.');
+        setIsGettingLocation(false);
+        setLocationError(error.message);
+        reject(error);
+        return;
       }
 
-      return new Promise<LocationType>((resolve, reject) => {
+      // Configure Geolocation
+      Geolocation.setRNConfiguration({
+        skipPermissionRequests: false,
+        authorizationLevel: 'whenInUse',
+        locationProvider: 'auto',
+      });
+
+      // First try with high accuracy
+      let attempts = 0;
+      const maxAttempts = 2;
+      
+      const tryGetLocation = (useHighAccuracy: boolean) => {
+        attempts++;
+        
         Geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude, accuracy } = position.coords;
@@ -152,48 +183,50 @@ console.log(location,'location manoj')
           },
           (error) => {
             setIsGettingLocation(false);
+            
+            // If first attempt with high accuracy fails, try with low accuracy
+            if (useHighAccuracy && attempts < maxAttempts) {
+              console.log('High accuracy failed, trying low accuracy...');
+              tryGetLocation(false); // Try with low accuracy
+              return;
+            }
+            
             let errorMessage = 'Failed to get location';
             
-            switch (error.code) {
-              case 1: // PERMISSION_DENIED
-                errorMessage = 'Location permission denied. Please enable location services in settings.';
-                setHasLocationPermission(false);
-                break;
-              case 2: // POSITION_UNAVAILABLE
-                errorMessage = 'Location information unavailable. Please check your GPS or network connection.';
-                break;
-              case 3: // TIMEOUT
-                errorMessage = 'Location request timed out. Please try again.';
-                break;
-              default:
-                errorMessage = error.message || 'Failed to get location';
+            if (error.code === 1) { // PERMISSION_DENIED
+              errorMessage = 'Location permission denied. Please enable location services in settings.';
+              setHasLocationPermission(false);
+            } else if (error.code === 2) { // POSITION_UNAVAILABLE
+              errorMessage = 'Location information unavailable. Please check your GPS or network connection.';
+            } else if (error.code === 3) { // TIMEOUT
+              errorMessage = 'Location request timed out. Please go to an open area with clear sky view and try again.';
+            } else {
+              errorMessage = error.message || 'Failed to get location';
             }
             
             setLocationError(errorMessage);
             reject(new Error(errorMessage));
           },
           {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 10000,
-            showLocationDialog: true,
-            forceRequestLocation: true
+            enableHighAccuracy: useHighAccuracy,
+            timeout: useHighAccuracy ? 10000 : 15000, // 10s for high accuracy, 15s for low
+            maximumAge: useHighAccuracy ? 0 : 60000, // Don't use cached for high accuracy
+            distanceFilter: useHighAccuracy ? 0 : 10,
           }
         );
-      });
-    } catch (err: any) {
+      };
+      
+      // Start with high accuracy
+      tryGetLocation(true);
+      
+    }).catch(err => {
       setIsGettingLocation(false);
-      setLocationError(err.message || 'Failed to get location');
-      throw err;
-    }
-  };
-
-  // Get location when modal opens or step changes to step 2
-  useEffect(() => {
-    if (visible && currentStep === 2) {
-      getCurrentLocation();
-    }
-  }, [visible, currentStep]);
+      const error = new Error('Failed to request location permission.');
+      setLocationError(error.message);
+      reject(error);
+    });
+  });
+};
 
   // Check permission when modal opens
   useEffect(() => {
@@ -209,7 +242,7 @@ console.log(location,'location manoj')
       setVerificationResult(null);
       setLocation({ latitude: null, longitude: null, accuracy: null });
       setLocationError(null);
-      setHasLocationPermission(false);
+      setIsGettingLocation(false);
     }
   }, [visible]);
 
@@ -218,9 +251,32 @@ console.log(location,'location manoj')
     setVerificationResult(null);
   };
 
-  const handleVerifyImage = async () => {
+  const handleNextStep = () => {
+    if (currentStep === 1 && capturedImageFile) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (currentStep === 2) {
+      setCurrentStep(1);
+    } else if (currentStep === 3) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handleVerifyAndSubmit = async () => {
     if (!capturedImageFile) {
       Alert.alert('Missing Photo', 'Please capture your face photo first.');
+      setCurrentStep(1);
+      return;
+    }
+
+    if (!batteryLevel) {
+      Alert.alert('Missing Battery Level', 'Please select battery percentage.');
+      setCurrentStep(2);
       return;
     }
 
@@ -228,141 +284,259 @@ console.log(location,'location manoj')
     setVerificationResult(null);
     
     try {
-      const formData = new FormData();
-      formData.append('image', {
+      // Get location first
+      let locationData = location;
+      if (!location.latitude || !location.longitude) {
+        try {
+          locationData = await getCurrentLocation();
+        } catch (locationErr: any) {
+          // Ask user if they want to continue without location
+          const shouldContinue = await new Promise((resolve) => {
+            Alert.alert(
+              'Location Error',
+              `Failed to get location: ${locationErr.message}. Do you want to submit without location?`,
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Submit Anyway', onPress: () => resolve(true) }
+              ]
+            );
+          });
+          
+          if (!shouldContinue) {
+            setIsVerifying(false);
+            return;
+          }
+        }
+      }
+
+      // Create FormData with all check-in data
+      const checkinFormData = new FormData();
+      
+      // Add image for verification
+      checkinFormData.append('image', {
         uri: capturedImageFile.uri,
         type: capturedImageFile.type || 'image/jpeg',
         name: capturedImageFile.name || `checkin_${Date.now()}.jpg`,
       } as any);
       
-      // Call your verify API
-      const result = await verifyImage(formData);
+      // Add battery information
+      checkinFormData.append('battery_remarks', batteryText);
+      checkinFormData.append('battery_percentage', batteryLevel.toString());
+      
+      // Add location if available
+      if (locationData.latitude && locationData.longitude) {
+        checkinFormData.append('longitude', locationData.longitude.toString());
+        checkinFormData.append('latitude', locationData.latitude.toString());
+        
+        if (locationData.accuracy) {
+          checkinFormData.append('location_accuracy', locationData.accuracy.toString());
+        }
+      }
+
+      // Single API call for check-in (includes verification)
+      const checkinResult = await checkin(checkinFormData);
       
       setVerificationResult({
         success: true,
-        message: result.message || 'Identity verified successfully!'
+        message: 'Check-in completed successfully!'
       });
       
-      // Get location before proceeding to next step
-      await getCurrentLocation();
-      
-      // Auto-advance to next step after a short delay
+      // Show success and close after delay
       setTimeout(() => {
-        setCurrentStep(2);
-      }, 1000);
+        Alert.alert('Success', checkinResult.message || 'Check-in completed!', [
+          { text: 'Done', onPress: onCheckinSuccess }
+        ]);
+      }, 500);
+      
     } catch (err: any) {
+      // Check if it's a verification error from the backend
+      let errorMessage = err.message || 'Check-in failed. Please try again.';
+      
+      // Parse specific error messages from backend
+      if (err.message?.toLowerCase().includes('face') || 
+          err.message?.toLowerCase().includes('verification') || 
+          err.message?.toLowerCase().includes('identity')) {
+        errorMessage = 'Identity verification failed. Please take a clear face photo and try again.';
+      } else if (err.message?.toLowerCase().includes('location')) {
+        errorMessage = 'Location is required for check-in. Please enable location services.';
+      }
+      
       setVerificationResult({
         success: false,
-        message: err.message || 'Verification failed. Please try again.'
+        message: errorMessage
       });
+      
+      Alert.alert('Check-in Failed', errorMessage);
     } finally {
       setIsVerifying(false);
     }
   };
 
-  const handleSubmitCheckin = async () => {
-    if (!capturedImageFile) {
-      Alert.alert('Missing Photo', 'Please verify your identity first.');
-      setCurrentStep(1);
-      return;
-    }
-
-    // Validate location
-    if (!location.latitude || !location.longitude) {
-      Alert.alert(
-        'Location Required',
-        'Please wait for location to be fetched or enable location services.',
-        [
-          { text: 'Retry', onPress: getCurrentLocation },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append('image', {
-        uri: capturedImageFile.uri,
-        type: capturedImageFile.type || 'image/jpeg',
-        name: capturedImageFile.name || `checkin_${Date.now()}.jpg`,
-      } as any);
-      
-      formData.append('battery_remarks', batteryText);
-      formData.append('battery_percentage', batteryLevel.toString());
-      formData.append('longitude', location.longitude.toString());
-      formData.append('latitude', location.latitude.toString());
-      
-      // Add accuracy if available
-      if (location.accuracy) {
-        formData.append('location_accuracy', location.accuracy.toString());
-      }
-
-      const res = await checkin(formData);
-      Alert.alert('Success', res.message || 'Check-in completed!', [
-        { text: 'Done', onPress: onCheckinSuccess }
-      ]);
-    } catch (err: any) {
-      Alert.alert('Check-in Failed', err.message || 'Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRefreshLocation = async () => {
-    await getCurrentLocation();
-  };
-
   // Open settings to enable location
   const openLocationSettings = () => {
-    if (Platform.OS === 'ios') {
-      // For iOS
-      Alert.alert(
-        'Enable Location',
-        'Please enable location services in your device settings to continue.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => {
-            // You can use Linking.openURL('app-settings:') here
-          }}
-        ]
-      );
-    } else {
-      // For Android
-      Alert.alert(
-        'Enable Location',
-        'Please enable location services in your device settings to continue.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => {
-            // You can use Linking.openURL('settings:') here
-          }}
-        ]
-      );
+    Alert.alert(
+      'Enable Location',
+      'Please enable location services in your device settings to continue.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Open Settings', 
+          onPress: () => {
+            if (Platform.OS === 'ios') {
+              Linking.openURL('app-settings:');
+            } else {
+              Linking.openSettings();
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Manual location entry as fallback
+  const handleManualLocationEntry = () => {
+    Alert.prompt(
+      'Enter Location',
+      'Please enter latitude and longitude (comma-separated):',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Submit', 
+          onPress: (text:any) => {
+            if (text) {
+              const [lat, lon] = text.split(',').map((coord:any) => parseFloat(coord.trim()));
+              if (!isNaN(lat) && !isNaN(lon)) {
+                const manualLocation = {
+                  latitude: lat,
+                  longitude: lon,
+                  accuracy: 100 // Default accuracy for manual entry
+                };
+                setLocation(manualLocation);
+                setLocationError(null);
+                Alert.alert('Success', 'Location manually entered.');
+              } else {
+                Alert.alert('Invalid Input', 'Please enter valid latitude and longitude values.');
+              }
+            }
+          }
+        }
+      ],
+      'plain-text',
+      '20.296059, 85.824539' // Default Puri coordinates
+    );
+  };
+
+  // Test location function
+  const testLocation = async () => {
+    try {
+      const result = await getCurrentLocation();
+      Alert.alert('Location Test', 
+        `Success! Lat: ${result.latitude}, Lon: ${result.longitude}`);
+    } catch (err: any) {
+      Alert.alert('Location Test Failed', err.message);
     }
   };
 
-  // Render location permission denied UI
-  const renderLocationPermissionDenied = () => (
-    <View style={styles.permissionDeniedCard}>
-      <AlertCircle size={24} color="#DC2626" />
-      <View style={styles.permissionDeniedTextContainer}>
-        <Text style={styles.permissionDeniedTitle}>
-          Location Access Required
+  // Render location status
+  const renderLocationStatus = () => {
+    if (!hasLocationPermission && Platform.OS === 'android') {
+      return (
+        <View style={styles.permissionDeniedCard}>
+          <AlertCircle size={24} color="#DC2626" />
+          <View style={styles.permissionDeniedTextContainer}>
+            <Text style={styles.permissionDeniedTitle}>
+              Location Access Required
+            </Text>
+            <Text style={styles.permissionDeniedDescription}>
+              Tap the button below to enable location permissions.
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.permissionButton}
+            onPress={getCurrentLocation}
+          >
+            <Text style={styles.permissionButtonText}>Enable Location</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (isGettingLocation) {
+      return (
+        <View style={styles.locationLoading}>
+          <ActivityIndicator size="small" color="#64748B" />
+          <Text style={styles.locationLoadingText}>
+            Fetching your location...
+          </Text>
+        </View>
+      );
+    }
+
+    if (locationError) {
+      return (
+        <View style={styles.locationErrorContainer}>
+          <AlertCircle size={16} color="#DC2626" />
+          <Text style={styles.locationErrorText}>{locationError}</Text>
+          <View style={styles.locationActionButtons}>
+            <TouchableOpacity 
+              style={styles.smallButton}
+              onPress={getCurrentLocation}
+            >
+              <Text style={styles.smallButtonText}>Retry GPS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.smallButton, styles.manualButton]}
+              onPress={handleManualLocationEntry}
+            >
+              <Text style={[styles.smallButtonText, styles.manualButtonText]}>
+                Enter Manually
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    if (location.latitude && location.longitude) {
+      return (
+        <View style={styles.locationCoordinates}>
+          <View style={styles.coordinateRow}>
+            <Text style={styles.coordinateLabel}>Latitude:</Text>
+            <Text style={styles.coordinateValue}>{location.latitude.toFixed(6)}</Text>
+          </View>
+          <View style={styles.coordinateRow}>
+            <Text style={styles.coordinateLabel}>Longitude:</Text>
+            <Text style={styles.coordinateValue}>{location.longitude.toFixed(6)}</Text>
+          </View>
+          {location.accuracy && (
+            <Text style={styles.accuracyText}>
+              Accuracy: ±{Math.round(location.accuracy)} meters
+            </Text>
+          )}
+          <TouchableOpacity 
+            style={[styles.smallButton, { marginTop: 8, alignSelf: 'flex-start' }]}
+            onPress={getCurrentLocation}
+          >
+            <Text style={styles.smallButtonText}>Refresh Location</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.locationPrompt}>
+        <Text style={styles.locationPromptText}>
+          Location will be fetched when you submit your check-in.
         </Text>
-        <Text style={styles.permissionDeniedDescription}>
-          This app needs location access to record your check-in location.
-        </Text>
+        <TouchableOpacity 
+          style={[styles.smallButton, { marginTop: 8 }]}
+          onPress={testLocation}
+        >
+          <Text style={styles.smallButtonText}>Test Location Now</Text>
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity 
-        style={styles.permissionButton}
-        onPress={openLocationSettings}
-      >
-        <Text style={styles.permissionButtonText}>Enable</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <Modal
@@ -383,14 +557,14 @@ console.log(location,'location manoj')
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>Daily Check-in</Text>
-              <Text style={styles.headerSubtitle}>Step {currentStep} of 2</Text>
+              <Text style={styles.headerSubtitle}>Step {currentStep} of 3</Text>
             </View>
             <View style={{ width: 40 }} />
           </View>
 
           {/* Progress Bar */}
           <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${(currentStep / 2) * 100}%` }]} />
+            <View style={[styles.progressFill, { width: `${(currentStep / 3) * 100}%` }]} />
           </View>
 
           <ScrollView 
@@ -399,140 +573,31 @@ console.log(location,'location manoj')
           >
             {currentStep === 1 ? (
               <View style={styles.stepWrapper}>
-                <Text style={styles.title}>Face Verification</Text>
+                <Text style={styles.title}>Take Photo</Text>
                 <Text style={styles.description}>
-                  Take a clear photo of your face and verify your identity before starting.
+                  Take a clear photo of your face for identity verification.
                 </Text>
 
                 <View style={styles.cameraContainer}>
-                  <FaceDetectionComponent 
+                  <FaceDetectionComponent
                     onImageCaptured={handleFaceCapture}
                     imageUri={capturedImageFile?.uri || null}
                   />
-                  {verificationResult?.success && (
-                    <View style={styles.overlaySuccess}>
-                      <CheckCircle2 size={40} color="#22C55E" />
-                      <Text style={styles.overlayText}>Verified</Text>
-                      <Text style={styles.overlaySubtext}>
-                        {verificationResult.message}
-                      </Text>
-                    </View>
-                  )}
-                  {verificationResult?.success === false && (
-                    <View style={styles.overlayError}>
-                      <AlertCircle size={40} color="#DC2626" />
-                      <Text style={styles.overlayText}>Verification Failed</Text>
-                      <Text style={styles.overlaySubtext}>
-                        {verificationResult.message}
-                      </Text>
-                    </View>
-                  )}
                 </View>
-
-                {capturedImageFile && !verificationResult?.success && (
-                  <TouchableOpacity 
-                    style={[
-                      styles.verifyButton,
-                      isVerifying && styles.buttonDisabled
-                    ]}
-                    onPress={handleVerifyImage}
-                    disabled={isVerifying}
-                  >
-                    {isVerifying ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <>
-                        <Text style={styles.verifyButtonText}>Verify Identity</Text>
-                        <CheckCircle2 size={20} color="#FFF" />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
 
                 <View style={styles.infoCard}>
                   <Info size={18} color="#0EA5E9" />
                   <Text style={styles.infoText}>
-                    Ensure your face is well-lit and remove any sunglasses or hats for verification.
+                    Ensure your face is well-lit and remove any sunglasses or hats.
                   </Text>
                 </View>
               </View>
-            ) : (
+            ) : currentStep === 2 ? (
               <View style={styles.stepWrapper}>
-                <View style={styles.verificationBadge}>
-                  <CheckCircle2 size={20} color="#22C55E" />
-                  <Text style={styles.verificationBadgeText}>Identity Verified</Text>
-                </View>
-
-                <Text style={styles.title}>Vehicle Status</Text>
+                <Text style={styles.title}>Battery Status</Text>
                 <Text style={styles.description}>
                   Select the current battery percentage of your vehicle.
                 </Text>
-
-                {/* Location Status Card */}
-                <View style={styles.locationCard}>
-                  <View style={styles.locationHeader}>
-                    <MapPin size={20} color="#64748B" />
-                    <Text style={styles.locationTitle}>Current Location</Text>
-                    <TouchableOpacity 
-                      onPress={handleRefreshLocation}
-                      disabled={isGettingLocation}
-                    >
-                      {isGettingLocation ? (
-                        <ActivityIndicator size="small" color="#3B82F6" />
-                      ) : (
-                        <Text style={styles.refreshText}>Refresh</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {!hasLocationPermission ? (
-                    renderLocationPermissionDenied()
-                  ) : isGettingLocation ? (
-                    <View style={styles.locationLoading}>
-                      <ActivityIndicator size="small" color="#64748B" />
-                      <Text style={styles.locationLoadingText}>
-                        Fetching your location...
-                      </Text>
-                    </View>
-                  ) : locationError ? (
-                    <View style={styles.locationError}>
-                      <AlertCircle size={16} color="#DC2626" />
-                      <Text style={styles.locationErrorText}>{locationError}</Text>
-                      <TouchableOpacity 
-                        style={styles.retryButton}
-                        onPress={getCurrentLocation}
-                      >
-                        <Text style={styles.retryButtonText}>Retry</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : location.latitude && location.longitude ? (
-                    <View>
-                      <View style={styles.coordinatesContainer}>
-                        <View style={styles.coordinateItem}>
-                          <Text style={styles.coordinateLabel}>Latitude</Text>
-                          <Text style={styles.coordinateValue}>
-                            {location.latitude.toFixed(6)}
-                          </Text>
-                        </View>
-                        <View style={styles.coordinateItem}>
-                          <Text style={styles.coordinateLabel}>Longitude</Text>
-                          <Text style={styles.coordinateValue}>
-                            {location.longitude.toFixed(6)}
-                          </Text>
-                        </View>
-                      </View>
-                      {location.accuracy && (
-                        <Text style={styles.accuracyText}>
-                          Accuracy: ±{Math.round(location.accuracy)} meters
-                        </Text>
-                      )}
-                    </View>
-                  ) : (
-                    <Text style={styles.locationPlaceholder}>
-                      Location will be fetched when you submit
-                    </Text>
-                  )}
-                </View>
 
                 <View style={styles.batteryGrid}>
                   {[20, 40, 60, 80, 100].map((level) => (
@@ -567,22 +632,86 @@ console.log(location,'location manoj')
                   numberOfLines={4}
                 />
               </View>
+            ) : (
+              <View style={styles.stepWrapper}>
+                <Text style={styles.title}>Review & Submit</Text>
+                <Text style={styles.description}>
+                  Verify your information and submit your check-in.
+                </Text>
+
+                {/* Photo Preview */}
+                <View style={styles.reviewCard}>
+                  <Text style={styles.reviewCardTitle}>Photo</Text>
+                  {capturedImageFile ? (
+                    <Image 
+                      source={{ uri: capturedImageFile.uri }}
+                      style={styles.reviewImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.reviewMissing}>No photo taken</Text>
+                  )}
+                </View>
+
+                {/* Battery Review */}
+                <View style={styles.reviewCard}>
+                  <Text style={styles.reviewCardTitle}>Battery Level</Text>
+                  <View style={styles.reviewRow}>
+                    <Battery size={20} color="#64748B" />
+                    <Text style={styles.reviewValue}>{batteryLevel || 'Not selected'}%</Text>
+                  </View>
+                </View>
+
+                {/* Remarks Review */}
+                {batteryText ? (
+                  <View style={styles.reviewCard}>
+                    <Text style={styles.reviewCardTitle}>Remarks</Text>
+                    <Text style={styles.reviewValue}>{batteryText}</Text>
+                  </View>
+                ) : null}
+
+                {/* Location Status */}
+                <View style={styles.reviewCard}>
+                  <View style={styles.locationHeader}>
+                    <MapPin size={20} color="#64748B" />
+                    <Text style={styles.locationTitle}>Current Location</Text>
+                  </View>
+                  {renderLocationStatus()}
+                </View>
+
+                {/* Verification Status */}
+                {verificationResult && (
+                  <View style={[
+                    styles.verificationResult,
+                    verificationResult.success ? styles.successCard : styles.errorCard
+                  ]}>
+                    {verificationResult.success ? (
+                      <CheckCircle2 size={24} color="#22C55E" />
+                    ) : (
+                      <AlertCircle size={24} color="#DC2626" />
+                    )}
+                    <Text style={styles.verificationResultText}>
+                      {verificationResult.message}
+                    </Text>
+                  </View>
+                )}
+              </View>
             )}
 
-            {(error || locationError) && (
+            {error && (
               <View style={styles.errorBox}>
                 <AlertCircle size={16} color="#DC2626" />
-                <Text style={styles.errorText}>{error || locationError}</Text>
+                <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
           </ScrollView>
 
           {/* Footer Actions */}
           <View style={styles.footer}>
-            {currentStep === 2 && (
+            {currentStep > 1 && (
               <TouchableOpacity 
                 style={styles.backButton} 
-                onPress={() => setCurrentStep(1)}
+                onPress={handlePreviousStep}
               >
                 <ChevronLeft size={20} color="#64748B" />
                 <Text style={styles.backButtonText}>Back</Text>
@@ -592,19 +721,23 @@ console.log(location,'location manoj')
             <TouchableOpacity 
               style={[
                 styles.primaryButton,
-                (currentStep === 1 || isSubmitting) && styles.buttonDisabled
+                (currentStep === 1 && !capturedImageFile) && styles.buttonDisabled
               ]}
-              onPress={currentStep === 1 ? handleVerifyImage : handleSubmitCheckin}
-              disabled={currentStep === 1 ? isVerifying || !capturedImageFile : isSubmitting}
+              onPress={currentStep === 3 ? handleVerifyAndSubmit : handleNextStep}
+              disabled={
+                currentStep === 1 ? !capturedImageFile : 
+                currentStep === 2 ? !batteryLevel :
+                isVerifying
+              }
             >
-              {isSubmitting ? (
+              {currentStep === 3 && isVerifying ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
                 <>
                   <Text style={styles.primaryButtonText}>
-                    {currentStep === 1 ? 'Verify to Continue' : 'Complete Check-in'}
+                    {currentStep === 3 ? 'Verify & Submit' : 'Continue'}
                   </Text>
-                  {currentStep === 2 && <ChevronRight size={20} color="#FFF" />}
+                  {currentStep < 3 && <ChevronRight size={20} color="#FFF" />}
                 </>
               )}
             </TouchableOpacity>
@@ -686,59 +819,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  overlaySuccess: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    zIndex: 10,
-  },
-  overlayError: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    zIndex: 10,
-  },
-  overlayText: {
-    marginTop: 12,
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#15803D',
-    textAlign: 'center',
-  },
-  overlaySubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  verifyButton: {
-    backgroundColor: '#3B82F6',
-    height: 56,
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  verifyButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
   infoCard: {
     flexDirection: 'row',
     backgroundColor: '#F0F9FF',
@@ -752,143 +832,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0369A1',
     lineHeight: 20,
-  },
-  verificationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    gap: 8,
-    marginBottom: 16,
-  },
-  verificationBadgeText: {
-    color: '#166534',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  locationCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  locationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  locationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    flex: 1,
-    marginLeft: 8,
-  },
-  refreshText: {
-    color: '#3B82F6',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  locationLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  locationLoadingText: {
-    color: '#64748B',
-    fontSize: 14,
-  },
-  locationError: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  locationErrorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    flex: 1,
-  },
-  permissionDeniedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    padding: 12,
-    borderRadius: 8,
-    gap: 12,
-  },
-  permissionDeniedTextContainer: {
-    flex: 1,
-  },
-  permissionDeniedTitle: {
-    color: '#DC2626',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  permissionDeniedDescription: {
-    color: '#DC2626',
-    fontSize: 12,
-    opacity: 0.8,
-  },
-  permissionButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  permissionButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  retryButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  retryButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  coordinatesContainer: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  coordinateItem: {
-    flex: 1,
-  },
-  coordinateLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  coordinateValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    backgroundColor: '#F1F5F9',
-    padding: 8,
-    borderRadius: 8,
-  },
-  accuracyText: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  locationPlaceholder: {
-    color: '#94A3B8',
-    fontSize: 14,
-    fontStyle: 'italic',
   },
   batteryGrid: {
     flexDirection: 'row',
@@ -980,7 +923,9 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#CBD5E1',
   },
-  textWhite: { color: '#FFF' },
+  textWhite: { 
+    color: '#FFF' 
+  },
   errorBox: {
     marginTop: 20,
     backgroundColor: '#FEF2F2',
@@ -994,6 +939,178 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     flex: 1,
+  },
+  // Review Step Styles
+  reviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  reviewCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 8,
+  },
+  reviewImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+  },
+  reviewMissing: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    padding: 20,
+  },
+  reviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewValue: {
+    fontSize: 16,
+    color: '#1E293B',
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  locationPrompt: {
+    paddingVertical: 8,
+  },
+  locationPromptText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+  locationCoordinates: {
+    marginTop: 4,
+  },
+  coordinateRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  coordinateLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    width: 80,
+  },
+  coordinateValue: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    flex: 1,
+  },
+  accuracyText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  locationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  locationLoadingText: {
+    color: '#64748B',
+    fontSize: 14,
+  },
+  locationErrorContainer: {
+    paddingVertical: 8,
+  },
+  locationErrorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  locationActionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  smallButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  smallButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  manualButton: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  manualButtonText: {
+    color: '#64748B',
+  },
+  verificationResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
+    marginTop: 16,
+  },
+  successCard: {
+    backgroundColor: '#F0FDF4',
+  },
+  errorCard: {
+    backgroundColor: '#FEF2F2',
+  },
+  verificationResultText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Location Permission Styles
+  permissionDeniedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
+  },
+  permissionDeniedTextContainer: {
+    flex: 1,
+  },
+  permissionDeniedTitle: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  permissionDeniedDescription: {
+    color: '#DC2626',
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  permissionButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  permissionButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
