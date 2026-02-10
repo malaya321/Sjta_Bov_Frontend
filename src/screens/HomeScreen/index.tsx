@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView,
@@ -42,6 +42,7 @@ type ImageFile = {
 };
 
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
+  
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [vehicleStatus, setVehicleStatus] = useState('Idle');
@@ -50,10 +51,27 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
   const [showCheckoutAlert, setShowCheckoutAlert] = useState(false);
+  const [showImageCaptureAlert, setShowImageCaptureAlert] = useState(false); // New state for image capture confirmation
   const [capturedImageFile, setCapturedImageFile] = useState<ImageFile | null>(null);
+  const [checkedInData, setIsCheckedInData] = useState();
+
+  useEffect(() => {
+    const loadCheckinStatus = async () => {
+      try {
+        const checkinTime = await AsyncStorage.getItem('checkinTime');
+        if (checkinTime) {
+          setIsCheckedIn(true);
+        }
+      } catch (error) {
+        console.error('Error loading check-in status:', error);
+      }
+    };
+
+    loadCheckinStatus();
+  }, []);
   
   const logoutMutation = useLogout();
-  const { checkin, isLoading: checkinLoading, error, resetError } = useCheckin();
+  const { checkin, checkout, isLoading: checkinLoading, error, resetError } = useCheckin();
 
   const driverData = {
     name: "Rajesh Kumar",
@@ -68,20 +86,29 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     onLogout();
   };
 
-  const confirmCheckout = () => {
+  const confirmCheckout = async () => {
+    const checkOutResult = await checkout();
+    // console.log(checkOutResult,'checkOutResult')
+    if(checkOutResult?.status){
+      
     setIsCheckedIn(false);
     setVehicleStatus('Idle');
     setShowCheckoutAlert(false);
+    AsyncStorage.removeItem('checkinTime');
+    }
   };
 
   const handleImageCaptured = (imageFile: ImageFile) => {
     console.log('Image captured for check-in:', imageFile);
     setCapturedImageFile(imageFile);
-    Alert.alert(
-      'Success!',
-      'Face image captured successfully! Tap Continue to proceed to battery status.',
-      [{ text: 'Continue', onPress: () => {} }]
-    );
+    // Show ConfirmationAlert instead of Alert.alert
+    setShowImageCaptureAlert(true);
+  };
+
+  const handleContinueToBattery = () => {
+    // This function is called when user taps "Continue" on the image capture confirmation
+    setShowImageCaptureAlert(false);
+    // You can add any additional logic here if needed
   };
 
   const handleCheckinFlow = () => {
@@ -244,6 +271,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         checkin={checkin}
       />
       
+      {/* Logout Confirmation Alert */}
       <ConfirmationAlert
         visible={showAlert}
         isCheckedIn={isCheckedIn}
@@ -251,6 +279,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         onCancel={() => setShowAlert(false)}
       />
       
+      {/* Checkout Confirmation Alert */}
       <ConfirmationAlert
         title='Check Out'
         message='Are you sure you want to check out?'
@@ -261,6 +290,17 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         onCancel={() => setShowCheckoutAlert(false)}
       />
       
+      {/* Image Capture Confirmation Alert - This replaces the Alert.alert */}
+      <ConfirmationAlert
+        title='Success!'
+        message='Face image captured successfully! Tap Continue to proceed to battery status.'
+        confirmText='Continue'
+        visible={showImageCaptureAlert}
+        isCheckedIn={isCheckedIn}
+        onConfirm={handleContinueToBattery}
+        onCancel={() => setShowImageCaptureAlert(false)}
+      />
+      
       <View style={styles.footer}>
         <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>
         <Text style={styles.footerText}>SJTA Driver Portal v1.0.0</Text>
@@ -269,6 +309,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   );
 };
 
+// Styles remain the same as in your original code
 const styles = StyleSheet.create({
   container: {
     flex: 1,

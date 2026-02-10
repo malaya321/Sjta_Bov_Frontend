@@ -20,6 +20,7 @@ import {
 import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle, MapPin } from 'lucide-react-native';
 import Geolocation from '@react-native-community/geolocation';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -52,7 +53,7 @@ type CheckinModalProps = {
   onCheckinSuccess: () => void;
   checkin: (formData: FormData) => Promise<any>;
 };
-
+const CHECKIN_TIME = 'checkinTime';
 const CheckinModal: React.FC<CheckinModalProps> = ({
   visible,
   onClose,
@@ -335,11 +336,13 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
 
       // Single API call for check-in (includes verification)
       const checkinResult = await checkin(checkinFormData);
-      
+      console.log(checkinResult,'checkinResult verifing')
       setVerificationResult({
         success: true,
         message: 'Check-in completed successfully!'
       });
+      // setIsCheckedInData(checkinResult)
+      await AsyncStorage.setItem(CHECKIN_TIME, checkinResult?.data?.check_in);
       
       // Show success and close after delay
       setTimeout(() => {
@@ -671,13 +674,13 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
                 ) : null}
 
                 {/* Location Status */}
-                <View style={styles.reviewCard}>
+                {/* <View style={styles.reviewCard}>
                   <View style={styles.locationHeader}>
                     <MapPin size={20} color="#64748B" />
                     <Text style={styles.locationTitle}>Current Location</Text>
                   </View>
                   {renderLocationStatus()}
-                </View>
+                </View> */}
 
                 {/* Verification Status */}
                 {verificationResult && (

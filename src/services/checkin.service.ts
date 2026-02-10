@@ -5,6 +5,7 @@ import api from '../api/axiosInstance';
 export interface CheckinResponse {
   success: boolean;
   message: string;
+  status:any;
   data?: {
     driver_id?: string;
     name?: string;
@@ -19,7 +20,8 @@ class CheckinService {
    */
   async checkin(formData: FormData): Promise<CheckinResponse> {
     try {
-      console.log('📤 Sending check-in request');
+      console.log(formData,'📤 Sending check-in request');
+      
       // ✅ Using the centralized api instance - token is automatically added by interceptor
       const response = await api.post(
         '/check-in',
@@ -47,23 +49,26 @@ class CheckinService {
   /**
    * Mock checkout
    */
-  async checkout(driverId: string, vehicleId: string, remarks?: string): Promise<CheckinResponse> {
+  async checkout(): Promise<CheckinResponse> {
     try {
+      const checkinTime = await AsyncStorage.getItem('checkinTime');
+      console.log(checkinTime,'checkinTime')
+      // return
       // If you have a real checkout endpoint, use:
-      // const response = await api.post('/checkout', { driverId, vehicleId, remarks });
-      // return response.data;
+      const response = await api.post('/check-out', {check_in:checkinTime});
+      return response.data;
       
       // For now, using mock:
-      await new Promise((resolve:any) => setTimeout(resolve, 1000));
+      // await new Promise((resolve:any) => setTimeout(resolve, 1000));
 
-      return {
-        success: true,
-        message: 'Check-out successful',
-        data: {
-          driver_id: driverId,
-          checkin_time: new Date().toISOString(),
-        },
-      };
+      // return {
+      //   success: true,
+      //   message: 'Check-out successful',
+      //   data: {
+      //     driver_id: driverId,
+      //     checkin_time: new Date().toISOString(),
+      //   },
+      // };
     } catch (error: any) {
       console.error('❌ Check-out error:', error);
       throw error;

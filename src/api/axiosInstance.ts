@@ -6,7 +6,6 @@ import { Platform } from 'react-native';
 // Your specific base URL
 const BASE_URL = 'http://192.168.10.189/SJTABOV/public/api/';
 
-
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // 30 seconds for mobile networks
@@ -16,14 +15,86 @@ const api = axios.create({
   },
 });
 
+// Store token in memory for faster access
+let cachedToken: string | null = null;
+let isTokenInitialized = false;
+
+/**
+ * Initialize token from AsyncStorage
+ */
+export const initializeToken = async (): Promise<void> => {
+  try {
+    cachedToken = await AsyncStorage.getItem('userToken');
+    isTokenInitialized = true;
+    if (__DEV__) {
+      console.log('🔐 Token initialized from cache:', cachedToken ? 'Yes' : 'No');
+    }
+  } catch (error) {
+    console.error('Failed to initialize token:', error);
+    cachedToken = null;
+    isTokenInitialized = true;
+  }
+};
+
+/**
+ * Set token manually (after login)
+ */
+export const setAuthToken = async (token: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem('userToken', token);
+    cachedToken = token;
+    if (__DEV__) {
+      console.log('🔑 Token set successfully');
+    }
+  } catch (error) {
+    console.error('Failed to set token:', error);
+  }
+};
+
+/**
+ * Remove token (logout)
+ */
+export const removeAuthToken = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem('userToken');
+    cachedToken = null;
+    if (__DEV__) {
+      console.log('🔓 Token removed');
+    }
+  } catch (error) {
+    console.error('Failed to remove token:', error);
+  }
+};
+
+/**
+ * Get current token (synchronous for immediate access)
+ */
+export const getCurrentToken = (): string | null => {
+  return cachedToken;
+};
+
+// Initialize token on app startup
+initializeToken();
+
 // Request interceptor for adding auth token
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Get token from AsyncStorage
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      // Wait for token initialization if not done yet
+      if (!isTokenInitialized) {
+        await initializeToken();
+      }
+      
+      // Add token from cache
+      if (cachedToken) {
+        config.headers.Authorization = `Bearer ${cachedToken}`;
+      } else {
+        // Try to get token directly from AsyncStorage as fallback
+        const directToken = await AsyncStorage.getItem('userToken');
+        if (directToken) {
+          cachedToken = directToken;
+          config.headers.Authorization = `Bearer ${directToken}`;
+        }
       }
       
       // Add platform info for debugging
@@ -35,7 +106,10 @@ api.interceptors.request.use(
         console.log('📤 API Request:', {
           url: config.url,
           method: config.method,
-          headers: config.headers,
+          hasToken: !!config.headers.Authorization,
+          tokenPreview: config.headers.Authorization 
+            ? `${config.headers.Authorization.substring(0, 30)}...` 
+            : 'No token',
           data: config.data,
         });
       }
@@ -60,7 +134,7 @@ api.interceptors.response.use(
       console.log('📥 API Response:', {
         url: response.config.url,
         status: response.status,
-        data: response.data,
+        hasToken: !!response.config.headers.Authorization,
       });
     }
     return response;
@@ -72,16 +146,33 @@ api.interceptors.response.use(
         url: error.config?.url,
         method: error.config?.method,
         status: error.response?.status,
+        hasToken: !!error.config?.headers?.Authorization,
         message: error.message,
-        responseData: error.response?.data,
+      });
+    }
+
+    // Handle 401 - Unauthorized
+    if (error.response?.status === 401) {
+      // Clear token cache and storage
+      cachedToken = null;
+      await AsyncStorage.removeItem('userToken');
+      
+      // You can add navigation to login screen here
+      // Example: navigation.navigate('Login');
+      
+      return Promise.reject({
+        status: 401,
+        message: 'Session expired. Please login again.',
+        requiresLogin: true,
+        data: error.response?.data,
       });
     }
 
     // Handle network errors (no internet, server not reachable)
-    if (error.message === 'Network Error') {
+    if (error.message === 'Network Error' || !error.response) {
       return Promise.reject({
         status: 0,
-        message: 'Network error. Please check your internet connection and ensure the server is running.',
+        message: 'Network error. Please check your internet connection.',
         isNetworkError: true,
         originalError: error.message,
       });
@@ -102,7 +193,6 @@ api.interceptors.response.use(
       
       switch (status) {
         case 400:
-          // Bad Request
           return Promise.reject({
             status,
             message: data?.message || 'Invalid request. Please check your input.',
@@ -110,19 +200,7 @@ api.interceptors.response.use(
             data,
           });
           
-        case 401:
-          // Unauthorized
-          await AsyncStorage.removeItem('userToken');
-          // You can trigger navigation to login here if needed
-          return Promise.reject({
-            status,
-            message: 'Session expired. Please login again.',
-            requiresLogin: true,
-            data,
-          });
-          
         case 403:
-          // Forbidden
           return Promise.reject({
             status,
             message: 'You do not have permission to access this resource.',
@@ -130,7 +208,6 @@ api.interceptors.response.use(
           });
           
         case 404:
-          // Not Found
           return Promise.reject({
             status,
             message: 'The requested resource was not found.',
@@ -138,16 +215,14 @@ api.interceptors.response.use(
           });
           
         case 422:
-          // Validation Error (common in Laravel)
           return Promise.reject({
             status,
-            message: 'Validation failed.',
-            errors: data?.errors || data,
+            message: data?.message || 'Validation failed.',
+            errors: data?.errors,
             data,
           });
           
         case 500:
-          // Server Error
           return Promise.reject({
             status,
             message: 'Server error. Please try again later.',
@@ -174,3 +249,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+// export { setAuthToken, removeAuthToken, getCurrentToken, initializeToken };

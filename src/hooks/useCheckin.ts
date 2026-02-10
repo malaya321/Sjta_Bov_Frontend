@@ -14,7 +14,7 @@ interface UseCheckinReturn {
   isLoading: boolean;
   error: string | null;
   checkin: (imageFile: ImageFile | FormData) => Promise<CheckinResponse>;
-  checkout: (driverId: string, vehicleId: string, remarks?: string) => Promise<CheckinResponse>;
+  checkout: () => Promise<CheckinResponse>;
   resetError: () => void;
 }
 
@@ -77,15 +77,16 @@ export const useCheckin = (): UseCheckinReturn => {
   }, []);
 
   const checkout = useCallback(async (
-    driverId: string,
-    vehicleId: string,
-    remarks?: string
+    // driverId: string,
+    // vehicleId: string,
+    // remarks?: string
+    // formData:FormData
   ): Promise<CheckinResponse> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      return await checkinService.checkout(driverId, vehicleId, remarks);
+      return await checkinService.checkout();
     } catch (err: any) {
       const message = err?.message || 'Check-out failed.';
       setError(message);
