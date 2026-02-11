@@ -5,7 +5,7 @@ import api from '../api/axiosInstance';
 export interface CheckinResponse {
   success: boolean;
   message: string;
-  status:any;
+  status: any;
   data?: {
     driver_id?: string;
     name?: string;
@@ -20,7 +20,7 @@ class CheckinService {
    */
   async checkin(formData: FormData): Promise<CheckinResponse> {
     try {
-      console.log(formData,'📤 Sending check-in request');
+      console.log(formData, '📤 Sending check-in request');
       
       // ✅ Using the centralized api instance - token is automatically added by interceptor
       const response = await api.post(
@@ -47,30 +47,28 @@ class CheckinService {
   }
 
   /**
-   * Mock checkout
+   * ✅ Checkout (Send check-in time)
    */
   async checkout(): Promise<CheckinResponse> {
     try {
+      // Retrieve check-in time from AsyncStorage
       const checkinTime = await AsyncStorage.getItem('checkinTime');
-      console.log(checkinTime,'checkinTime')
-      // return
-      // If you have a real checkout endpoint, use:
-      const response = await api.post('/check-out', {check_in:checkinTime});
-      return response.data;
       
-      // For now, using mock:
-      // await new Promise((resolve:any) => setTimeout(resolve, 1000));
+      if (!checkinTime) {
+        throw new Error('Check-in time not found in AsyncStorage');
+      }
 
-      // return {
-      //   success: true,
-      //   message: 'Check-out successful',
-      //   data: {
-      //     driver_id: driverId,
-      //     checkin_time: new Date().toISOString(),
-      //   },
-      // };
+      console.log('📤 Sending checkout request with check-in time:', checkinTime);
+
+      // Make the API call with the check-in time
+      const response = await api.post('/check-out', { check_in: checkinTime });
+
+      console.log('✅ Checkout successful:', response.data);
+      return response.data;
     } catch (error: any) {
       console.error('❌ Check-out error:', error);
+
+      // Rethrow the error for centralized error handling
       throw error;
     }
   }
