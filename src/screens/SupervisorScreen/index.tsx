@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import RosterManagementTable from '../../components/RosterManagementTable';
 import { 
   View, 
   Text, 
@@ -9,7 +10,8 @@ import {
   TextInput, 
   Alert, 
   Platform,
-  Dimensions 
+  Dimensions,
+  Modal
 } from 'react-native';
 import { 
   Users, 
@@ -26,7 +28,9 @@ import {
   Bell,
   Shield,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Search,
+  FileText
 } from 'lucide-react-native';
 import { useLogout } from '../../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
@@ -39,8 +43,21 @@ type RootStackParamList = {
   MainTabs: undefined;
   SupervisorStack: undefined;
   ActiveDriver: undefined;
-  AvailableBov:undefined;
+  AvailableBov: undefined;
 };
+
+interface RosterEntry {
+  id: string;
+  driverName: string;
+  vehicleName: string;
+  shiftTime: string;
+  rosterType: 'Regular' | 'Extra' | 'Emergency' | 'Training';
+  supervisorName: string;
+  zoneName: string;
+  rosterDate: string;
+  status: 'Active' | 'Completed' | 'Scheduled' | 'Cancelled';
+  vehicleOperationalStatus: 'Operational' | 'Maintenance' | 'Out of Service' | 'Reserved';
+}
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -51,23 +68,31 @@ interface SupervisorScreenProps {
 }
 
 const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
+  // All hooks at the top level
+  const logoutMutation = useLogout();
+  const navigation = useNavigation<NavigationProp>();
+
   const [selectedDriver, setSelectedDriver] = useState<any>(null);
   const [selectedBov, setSelectedBov] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [message, setMessage] = useState('Please report to the designated pick-up location. Drive safely and follow all traffic regulations.');
-  const logoutMutation = useLogout();
   
-  // Use the root navigation, not SupervisorStack
-    // const logoutMutation = useLogout();
-  const navigation = useNavigation<NavigationProp>();
- const confirmLogout = async() => {
-    // Trigger logout mutation
-    await logoutMutation.mutateAsync();
-    
-    // Call the parent logout function after successful logout
-    onLogout();
-  };
+  // Modal states
+  const [showDriverModal, setShowDriverModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [currentRosterId, setCurrentRosterId] = useState<string | null>(null);
+  const [currentDriverName, setCurrentDriverName] = useState<string>('');
+  const [currentVehicleName, setCurrentVehicleName] = useState<string>('');
+  const [currentDriverId, setCurrentDriverId] = useState<string>('');
+  const [currentVehicleId, setCurrentVehicleId] = useState<string>('');
+  const [driverSearchQuery, setDriverSearchQuery] = useState('');
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
+  // New state for justification and selected items in modals
+  const [selectedDriverForAssignment, setSelectedDriverForAssignment] = useState<any>(null);
+  const [selectedVehicleForAssignment, setSelectedVehicleForAssignment] = useState<any>(null);
+  const [justificationText, setJustificationText] = useState('');
+  
   // Initial assignments data
   const [assignments, setAssignments] = useState([
     { 
@@ -102,12 +127,77 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     },
   ]);
 
+  const [rosterData, setRosterData] = useState<RosterEntry[]>([
+    {
+      id: '1',
+      driverName: 'SV Rajesh Kumar',
+      vehicleName: 'BOV-401',
+      shiftTime: '08:30 AM - 04:30 PM',
+      rosterType: 'Regular',
+      supervisorName: 'Amit Sharma',
+      zoneName: 'Airport Zone',
+      rosterDate: '2024-03-15',
+      status: 'Active',
+      vehicleOperationalStatus: 'Operational'
+    },
+    {
+      id: '2',
+      driverName: 'Suresh Mohanty',
+      vehicleName: 'BOV-402',
+      shiftTime: '09:15 AM - 05:15 PM',
+      rosterType: 'Extra',
+      supervisorName: 'Priya Singh',
+      zoneName: 'City Center',
+      rosterDate: '2024-03-15',
+      status: 'Active',
+      vehicleOperationalStatus: 'Operational'
+    },
+    {
+      id: '3',
+      driverName: 'Amit Singh',
+      vehicleName: 'BOV-403',
+      shiftTime: '10:00 AM - 06:00 PM',
+      rosterType: 'Regular',
+      supervisorName: 'Vikram Patel',
+      zoneName: 'Railway Station',
+      rosterDate: '2024-03-14',
+      status: 'Completed',
+      vehicleOperationalStatus: 'Maintenance'
+    },
+    {
+      id: '4',
+      driverName: 'Ravi Sharma',
+      vehicleName: 'BOV-404',
+      shiftTime: '07:00 AM - 03:00 PM',
+      rosterType: 'Emergency',
+      supervisorName: 'Neha Gupta',
+      zoneName: 'Business Park',
+      rosterDate: '2024-03-15',
+      status: 'Scheduled',
+      vehicleOperationalStatus: 'Operational'
+    },
+    {
+      id: '5',
+      driverName: 'Kumar Patel',
+      vehicleName: 'BOV-405',
+      shiftTime: '02:00 PM - 10:00 PM',
+      rosterType: 'Training',
+      supervisorName: 'Rajesh Kumar',
+      zoneName: 'Convention Center',
+      rosterDate: '2024-03-16',
+      status: 'Scheduled',
+      vehicleOperationalStatus: 'Reserved'
+    }
+  ]);
+
   const drivers = [
     { id: 'D-1024', name: 'SV Rajesh Kumar', status: 'Available', rating: '4.8', trips: 247 },
     { id: 'D-1025', name: 'Suresh Mohanty', status: 'In Shift', rating: '4.9', trips: 312 },
     { id: 'D-1026', name: 'Amit Singh', status: 'Available', rating: '4.7', trips: 189 },
     { id: 'D-1027', name: 'Ravi Sharma', status: 'Available', rating: '4.6', trips: 156 },
     { id: 'D-1028', name: 'Kumar Patel', status: 'Break', rating: '4.8', trips: 278 },
+    { id: 'D-1029', name: 'Vikram Mehta', status: 'Available', rating: '4.9', trips: 201 },
+    { id: 'D-1030', name: 'Sanjay Gupta', status: 'Available', rating: '4.7', trips: 178 },
   ];
 
   const bovs = [
@@ -116,7 +206,179 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     { id: 'BOV-403', status: 'Maintenance', type: 'AC', capacity: '15 seats' },
     { id: 'BOV-404', status: 'Available', type: 'Electric', capacity: '10 seats' },
     { id: 'BOV-405', status: 'Available', type: 'AC', capacity: '20 seats' },
+    { id: 'BOV-406', status: 'Available', type: 'AC', capacity: '18 seats' },
+    { id: 'BOV-407', status: 'Available', type: 'Electric', capacity: '12 seats' },
   ];
+
+  // Filtered lists for modals
+  const filteredDrivers = drivers.filter(driver => 
+    driver.name.toLowerCase().includes(driverSearchQuery.toLowerCase()) ||
+    driver.id.toLowerCase().includes(driverSearchQuery.toLowerCase())
+  );
+
+  const filteredVehicles = bovs.filter(vehicle => 
+    vehicle.id.toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
+    vehicle.type.toLowerCase().includes(vehicleSearchQuery.toLowerCase())
+  );
+
+  const confirmLogout = async () => {
+    await logoutMutation.mutateAsync();
+    onLogout();
+  };
+
+  // Handler functions for roster management
+  const handleReassignDriver = (rosterId: string, currentDriver: string) => {
+    const roster = rosterData.find(r => r.id === rosterId);
+    const driver = drivers.find(d => d.name === currentDriver);
+    setCurrentRosterId(rosterId);
+    setCurrentDriverName(currentDriver);
+    setCurrentDriverId(driver?.id || '');
+    setDriverSearchQuery('');
+    setSelectedDriverForAssignment(null);
+    setJustificationText('');
+    setShowDriverModal(true);
+  };
+
+  const handleReassignVehicle = (rosterId: string, currentVehicle: string) => {
+    const roster = rosterData.find(r => r.id === rosterId);
+    const vehicle = bovs.find(v => v.id === currentVehicle);
+    setCurrentRosterId(rosterId);
+    setCurrentVehicleName(currentVehicle);
+    setCurrentVehicleId(vehicle?.id || '');
+    setVehicleSearchQuery('');
+    setSelectedVehicleForAssignment(null);
+    setJustificationText('');
+    setShowVehicleModal(true);
+  };
+
+  const handleSelectDriver = (driver: any) => {
+    if (driver.id === currentDriverId) {
+      Alert.alert('Info', 'This driver is already assigned to this roster.');
+      return;
+    }
+    setSelectedDriverForAssignment(driver);
+  };
+
+  const handleSelectVehicle = (vehicle: any) => {
+    if (vehicle.id === currentVehicleId) {
+      Alert.alert('Info', 'This vehicle is already assigned to this roster.');
+      return;
+    }
+    setSelectedVehicleForAssignment(vehicle);
+  };
+
+  const handleConfirmDriverReassignment = async () => {
+    if (!selectedDriverForAssignment) {
+      Alert.alert('Error', 'Please select a driver to reassign.');
+      return;
+    }
+
+    if (!justificationText.trim()) {
+      Alert.alert('Error', 'Please provide a justification for this reassignment.');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Reassignment',
+      `Are you sure you want to reassign from ${currentDriverName} to ${selectedDriverForAssignment.name}?\n\nJustification: ${justificationText}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              // TODO: Replace with your actual API call
+              // await reassignDriverAPI(currentRosterId, selectedDriverForAssignment.id, justificationText);
+              
+              // Update local state
+              setRosterData(prev => prev.map(roster => 
+                roster.id === currentRosterId 
+                  ? { ...roster, driverName: selectedDriverForAssignment.name }
+                  : roster
+              ));
+              
+              Alert.alert('Success', `Driver reassigned to ${selectedDriverForAssignment.name} successfully`);
+              setShowDriverModal(false);
+              setCurrentRosterId(null);
+              setCurrentDriverName('');
+              setCurrentDriverId('');
+              setSelectedDriverForAssignment(null);
+              setJustificationText('');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reassign driver. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleConfirmVehicleReassignment = async () => {
+    if (!selectedVehicleForAssignment) {
+      Alert.alert('Error', 'Please select a vehicle to reassign.');
+      return;
+    }
+
+    if (!justificationText.trim()) {
+      Alert.alert('Error', 'Please provide a justification for this reassignment.');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Reassignment',
+      `Are you sure you want to reassign from ${currentVehicleName} to ${selectedVehicleForAssignment.id}?\n\nJustification: ${justificationText}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              // TODO: Replace with your actual API call
+              // await reassignVehicleAPI(currentRosterId, selectedVehicleForAssignment.id, justificationText);
+              
+              // Update local state
+              setRosterData(prev => prev.map(roster => 
+                roster.id === currentRosterId 
+                  ? { ...roster, vehicleName: selectedVehicleForAssignment.id }
+                  : roster
+              ));
+              
+              Alert.alert('Success', `Vehicle reassigned to ${selectedVehicleForAssignment.id} successfully`);
+              setShowVehicleModal(false);
+              setCurrentRosterId(null);
+              setCurrentVehicleName('');
+              setCurrentVehicleId('');
+              setSelectedVehicleForAssignment(null);
+              setJustificationText('');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reassign vehicle. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditRoster = (roster: RosterEntry) => {
+    Alert.alert(
+      'Edit Roster',
+      `Edit roster for ${roster.driverName}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Save Changes',
+          onPress: () => {
+            // Navigate to edit roster screen
+            Alert.alert('Success', 'Roster updated successfully');
+          }
+        }
+      ]
+    );
+  };
+
+  const handleViewDetails = (roster: RosterEntry) => {
+    Alert.alert('Roster Details', JSON.stringify(roster, null, 2));
+  };
 
   const handleActiveDriversPress = () => {
     console.log('Navigating to ActiveDriver');
@@ -124,7 +386,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   };
 
   const handleAvailableBovsPress = () => {
-     navigation.navigate('AvailableBov');
+    navigation.navigate('AvailableBov');
   };
 
   const handleActiveTripsPress = () => {
@@ -138,44 +400,12 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     pendingRequests: 3
   };
 
-  // const handleLogout = () => {
-  //   Alert.alert(
-  //     'Logout',
-  //     'Are you sure you want to logout?',
-  //     [
-  //       {
-  //         text: 'Cancel',
-  //         style: 'cancel',
-  //       },
-  //       {
-  //         text: 'Logout',
-  //         style: 'destructive',
-  //         onPress: async () => {
-  //           try {
-  //             await logoutMutation.mutateAsync();
-  //             onLogout();
-  //           } catch (error) {
-  //             console.error('Logout error:', error);
-  //             Alert.alert(
-  //               'Logout Failed',
-  //               'There was an issue logging out. Please try again.',
-  //               [{ text: 'OK' }]
-  //             );
-  //           }
-  //         }
-  //       }
-  //     ],
-  //     { cancelable: true }
-  //   );
-  // };
-
   const handleAssign = () => {
     if (!selectedDriver || !selectedBov) {
       Alert.alert('Missing Info', 'Please select both a driver and a vehicle.');
       return;
     }
 
-    // Check if driver already has an active assignment
     const existingAssignment = assignments.find(
       assignment => assignment.driverId === selectedDriver.id && assignment.status === 'Active'
     );
@@ -195,7 +425,6 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       return;
     }
 
-    // Check if BOV is already assigned
     const bovAssigned = assignments.find(
       assignment => assignment.bov === selectedBov && assignment.status === 'Active'
     );
@@ -226,7 +455,6 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       location: 'Depot'
     };
 
-    // Update assignments state
     setAssignments(prev => [newAssignment, ...prev.filter(a => !(a.driverId === selectedDriver.id && a.status === 'Active'))]);
     
     Alert.alert(
@@ -272,9 +500,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   };
 
   const handleQuickAssign = () => {
-    // Find available driver
     const availableDriver = drivers.find(driver => driver.status === 'Available');
-    // Find available BOV
     const availableBov = bovs.find(bov => bov.status === 'Available')?.id;
 
     if (!availableDriver || !availableBov) {
@@ -322,7 +548,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
                 <Text style={styles.notificationBadgeText}>3</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutBtn} onPress={()=>setShowAlert(true)}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowAlert(true)}>
               <LogOut size={22} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -369,270 +595,359 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickActionBtn} onPress={handleQuickAssign}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FFFBEB' }]}>
-                <User size={24} color="#D97706" />
-              </View>
-              <Text style={styles.quickActionText}>Quick Assign</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickActionBtn} onPress={handleAvailableBovsPress}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#F0F9FF' }]}>
-                <Car size={24} color="#3B82F6" />
-              </View>
-              <Text style={styles.quickActionText}>View Fleet</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickActionBtn}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Shield size={24} color="#10B981" />
-              </View>
-              <Text style={styles.quickActionText}>Safety Check</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.quickActionBtn}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FEF2F2' }]}>
-                <AlertCircle size={24} color="#DC2626" />
-              </View>
-              <Text style={styles.quickActionText}>Alerts</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Current Assignments */}
+        {/* Roster Management Table */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Active Assignments</Text>
+            <Text style={styles.sectionTitle}>Roster Management</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{activeAssignments.length} Active</Text>
+              <Text style={styles.badgeText}>{rosterData.length} Rosters</Text>
             </View>
           </View>
           
-          {activeAssignments.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Car size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStateTitle}>No Active Assignments</Text>
-              <Text style={styles.emptyStateText}>Assign drivers to vehicles to begin operations</Text>
-            </View>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.assignmentsScroll}>
-              {activeAssignments.map((assignment) => (
-                <View key={assignment.id} style={styles.assignmentCard}>
-                  <View style={styles.assignmentHeader}>
-                    <View style={styles.driverInfo}>
-                      <View style={styles.driverAvatar}>
-                        <Text style={styles.driverInitials}>
-                          {assignment.driverName.split(' ').map(n => n[0]).join('')}
-                        </Text>
-                      </View>
-                      <View>
-                        <Text style={styles.driverName}>{assignment.driverName}</Text>
-                        <Text style={styles.driverId}>{assignment.driverId}</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.unassignBtn}
-                      onPress={() => handleUnassign(assignment.id)}
-                    >
-                      <X size={20} color="#DC2626" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <View style={styles.vehicleInfo}>
-                    <Car size={18} color="#64748B" />
-                    <Text style={styles.vehicleText}>{assignment.bov}</Text>
-                    <View style={styles.statusIndicator}>
-                      <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
-                      <Text style={styles.statusText}>On Route</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.assignmentDetails}>
-                    <View style={styles.detailRow}>
-                      <MapPin size={14} color="#94A3B8" />
-                      <Text style={styles.detailText}>{assignment.route}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Clock size={14} color="#94A3B8" />
-                      <Text style={styles.detailText}>Started at {assignment.time}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.locationBadge}>
-                    <MapPin size={12} color="#D97706" />
-                    <Text style={styles.locationText}>{assignment.location}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* Driver Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Available Drivers</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.driversScroll}>
-            {drivers.map((driver) => (
-              <TouchableOpacity
-                key={driver.id}
-                style={[
-                  styles.driverCard,
-                  selectedDriver?.id === driver.id && styles.selectedDriverCard
-                ]}
-                onPress={() => setSelectedDriver(driver)}
-                disabled={driver.status === 'In Shift'}
-              >
-                <View style={styles.driverCardHeader}>
-                  <View style={[
-                    styles.driverStatus, 
-                    { backgroundColor: driver.status === 'Available' ? '#10B981' : 
-                      driver.status === 'In Shift' ? '#D97706' : '#94A3B8' }
-                  ]} />
-                  <View style={styles.driverAvatarSmall}>
-                    <Text style={styles.driverInitialsSmall}>
-                      {driver.name.split(' ').map(n => n[0]).join('')}
-                    </Text>
-                  </View>
-                </View>
-                
-                <Text style={styles.driverCardName} numberOfLines={1}>
-                  {driver.name.split(' ')[0]}
-                </Text>
-                <Text style={styles.driverCardId}>{driver.id}</Text>
-                
-                <View style={styles.driverStats}>
-                  <View style={styles.rating}>
-                    <Text style={styles.ratingText}>⭐ {driver.rating}</Text>
-                  </View>
-                  <Text style={styles.tripsText}>{driver.trips} trips</Text>
-                </View>
-                
-                {driver.status === 'In Shift' && (
-                  <View style={styles.assignedTag}>
-                    <Text style={styles.assignedTagText}>On Duty</Text>
-                  </View>
-                )}
-                
-                {selectedDriver?.id === driver.id && (
-                  <View style={styles.selectedIndicator}>
-                    <CheckCircle2 size={20} color="#10B981" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Vehicle Selection */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Available Vehicles</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.vehiclesGrid}>
-            {bovs.map((bov) => {
-              const isAssigned = assignments.some(a => a.bov === bov.id && a.status === 'Active');
-              return (
-                <TouchableOpacity
-                  key={bov.id}
-                  style={[
-                    styles.vehicleCard,
-                    selectedBov === bov.id && styles.selectedVehicleCard,
-                    isAssigned && styles.assignedVehicleCard
-                  ]}
-                  onPress={() => {
-                    if (!isAssigned) setSelectedBov(bov.id);
-                  }}
-                  disabled={isAssigned || bov.status !== 'Available'}
-                >
-                  <View style={styles.vehicleCardHeader}>
-                    <Car size={24} color={
-                      selectedBov === bov.id ? "#FFF" : 
-                      isAssigned ? "#CBD5E1" : 
-                      bov.status === 'Available' ? "#10B981" : "#94A3B8"
-                    } />
-                    <View style={[
-                      styles.vehicleStatus,
-                      { backgroundColor: bov.status === 'Available' ? '#10B981' : 
-                        bov.status === 'In Use' ? '#D97706' : '#94A3B8' }
-                    ]} />
-                  </View>
-                  
-                  <Text style={[
-                    styles.vehicleId,
-                    selectedBov === bov.id && styles.selectedVehicleId,
-                    isAssigned && styles.disabledVehicleId
-                  ]}>
-                    {bov.id}
-                  </Text>
-                  
-                  <Text style={styles.vehicleType}>{bov.type}</Text>
-                  <Text style={styles.vehicleCapacity}>{bov.capacity}</Text>
-                  
-                  {isAssigned && (
-                    <View style={styles.assignedOverlay}>
-                      <Text style={styles.assignedOverlayText}>ASSIGNED</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Quick Summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Assignment Summary</Text>
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Selected Driver:</Text>
-              <Text style={styles.summaryValue}>
-                {selectedDriver ? selectedDriver.name : 'None selected'}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Selected Vehicle:</Text>
-              <Text style={styles.summaryValue}>
-                {selectedBov || 'None selected'}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Status:</Text>
-              <Text style={[
-                styles.summaryStatus,
-                { color: selectedDriver && selectedBov ? '#10B981' : '#DC2626' }
-              ]}>
-                {selectedDriver && selectedBov ? 'Ready to Assign' : 'Incomplete'}
-              </Text>
-            </View>
-          </View>
-          
-          <TouchableOpacity 
-            style={[
-              styles.confirmButton,
-              (!selectedDriver || !selectedBov) && styles.confirmButtonDisabled
-            ]} 
-            onPress={handleAssign}
-            disabled={!selectedDriver || !selectedBov}
-          >
-            <ClipboardCheck size={22} color="#FFF" />
-            <Text style={styles.confirmButtonText}>CONFIRM ASSIGNMENT</Text>
-          </TouchableOpacity>
+          <RosterManagementTable
+            data={rosterData}
+            onReassignDriver={handleReassignDriver}
+            onReassignVehicle={handleReassignVehicle}
+            onEditRoster={handleEditRoster}
+            onViewDetails={handleViewDetails}
+          />
         </View>
       </ScrollView>
-       <ConfirmationAlert
-              visible={showAlert}
-              isCheckedIn={isCheckedIn}
-              onConfirm={confirmLogout}
-              onCancel={() => setShowAlert(false)}
-            />
+
+      {/* Driver Selection Modal */}
+      <Modal
+        visible={showDriverModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowDriverModal(false);
+          setSelectedDriverForAssignment(null);
+          setJustificationText('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Reassign Driver</Text>
+                <Text style={styles.modalSubtitle}>
+                  Current Driver: {currentDriverName}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowDriverModal(false);
+                  setSelectedDriverForAssignment(null);
+                  setJustificationText('');
+                }}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Bar */}
+            <View style={styles.modalSearchContainer}>
+              <Search size={20} color="#94A3B8" style={styles.modalSearchIcon} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Search drivers by name or ID..."
+                placeholderTextColor="#94A3B8"
+                value={driverSearchQuery}
+                onChangeText={setDriverSearchQuery}
+              />
+            </View>
+
+            {/* Drivers List */}
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              style={styles.driversList}
+            >
+              {filteredDrivers.length === 0 ? (
+                <View style={styles.noDriversContainer}>
+                  <User size={48} color="#CBD5E1" />
+                  <Text style={styles.noDriversText}>No available drivers found</Text>
+                </View>
+              ) : (
+                filteredDrivers.map((driver) => (
+                  <TouchableOpacity
+                    key={driver.id}
+                    style={[
+                      styles.driverItem,
+                      driver.id === currentDriverId && styles.currentDriverItem,
+                      selectedDriverForAssignment?.id === driver.id && styles.selectedDriverItem
+                    ]}
+                    onPress={() => handleSelectDriver(driver)}
+                  >
+                    <View style={styles.driverItemLeft}>
+                      <View style={[
+                        styles.driverItemAvatar,
+                        driver.id === currentDriverId && styles.currentDriverAvatar,
+                        selectedDriverForAssignment?.id === driver.id && styles.selectedDriverAvatar
+                      ]}>
+                        <Text style={[
+                          styles.driverItemInitials,
+                          driver.id === currentDriverId && styles.currentDriverInitials,
+                          selectedDriverForAssignment?.id === driver.id && styles.selectedDriverInitials
+                        ]}>
+                          {driver.name.split(' ').map(n => n[0]).join('')}
+                        </Text>
+                      </View>
+                      <View style={styles.driverItemInfo}>
+                        <Text style={styles.driverItemName}>{driver.name}</Text>
+                        <Text style={styles.driverItemId}>{driver.id}</Text>
+                        <View style={styles.driverItemStats}>
+                          <View style={styles.driverItemRating}>
+                            <Text style={styles.driverItemRatingText}>⭐ {driver.rating}</Text>
+                          </View>
+                          <Text style={styles.driverItemTrips}>{driver.trips} trips</Text>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.driverItemRight}>
+                      <View style={[
+                        styles.driverItemStatus,
+                        { backgroundColor: driver.status === 'Available' ? '#10B981' : 
+                          driver.status === 'In Shift' ? '#D97706' : 
+                          driver.status === 'Break' ? '#94A3B8' : '#64748B' }
+                      ]} />
+                      <Text style={styles.driverItemStatusText}>{driver.status}</Text>
+                      {driver.id === currentDriverId && (
+                        <View style={styles.currentDriverBadge}>
+                          <Text style={styles.currentDriverBadgeText}>Current</Text>
+                        </View>
+                      )}
+                      {selectedDriverForAssignment?.id === driver.id && (
+                        <View style={styles.selectedDriverBadge}>
+                          <CheckCircle2 size={14} color="#FFF" />
+                          <Text style={styles.selectedDriverBadgeText}>Selected</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Justification Section - Always render but conditionally show */}
+            <View style={[styles.justificationContainer, !selectedDriverForAssignment && styles.justificationHidden]}>
+              <View style={styles.justificationHeader}>
+                <FileText size={20} color="#1E293B" />
+                <Text style={styles.justificationTitle}>Reassignment Justification</Text>
+              </View>
+              <TextInput
+                style={styles.justificationInput}
+                placeholder="Please provide a reason for reassigning this driver..."
+                placeholderTextColor="#94A3B8"
+                value={justificationText}
+                onChangeText={setJustificationText}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                editable={!!selectedDriverForAssignment}
+              />
+            </View>
+
+            {/* Bottom Actions */}
+            <View style={styles.modalFooter}>
+              {selectedDriverForAssignment ? (
+                <TouchableOpacity 
+                  style={[
+                    styles.assignButton,
+                    (!justificationText.trim()) && styles.assignButtonDisabled
+                  ]}
+                  onPress={handleConfirmDriverReassignment}
+                  disabled={!justificationText.trim()}
+                >
+                  <Text style={styles.assignButtonText}>Confirm Reassignment</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.modalCancelButton}
+                  onPress={() => {
+                    setShowDriverModal(false);
+                    setSelectedDriverForAssignment(null);
+                    setJustificationText('');
+                  }}
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Vehicle Selection Modal */}
+      <Modal
+        visible={showVehicleModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowVehicleModal(false);
+          setSelectedVehicleForAssignment(null);
+          setJustificationText('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Reassign Vehicle</Text>
+                <Text style={styles.modalSubtitle}>
+                  Current Vehicle: {currentVehicleName}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowVehicleModal(false);
+                  setSelectedVehicleForAssignment(null);
+                  setJustificationText('');
+                }}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Bar */}
+            <View style={styles.modalSearchContainer}>
+              <Search size={20} color="#94A3B8" style={styles.modalSearchIcon} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Search vehicles by ID or type..."
+                placeholderTextColor="#94A3B8"
+                value={vehicleSearchQuery}
+                onChangeText={setVehicleSearchQuery}
+              />
+            </View>
+
+            {/* Vehicles List */}
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              style={styles.vehiclesList}
+            >
+              {filteredVehicles.length === 0 ? (
+                <View style={styles.noVehiclesContainer}>
+                  <Car size={48} color="#CBD5E1" />
+                  <Text style={styles.noVehiclesText}>No available vehicles found</Text>
+                </View>
+              ) : (
+                filteredVehicles.map((vehicle) => (
+                  <TouchableOpacity
+                    key={vehicle.id}
+                    style={[
+                      styles.vehicleItem,
+                      vehicle.id === currentVehicleId && styles.currentVehicleItem,
+                      selectedVehicleForAssignment?.id === vehicle.id && styles.selectedVehicleItem
+                    ]}
+                    onPress={() => handleSelectVehicle(vehicle)}
+                  >
+                    <View style={styles.vehicleItemLeft}>
+                      <View style={[
+                        styles.vehicleItemIcon,
+                        vehicle.id === currentVehicleId && styles.currentVehicleIcon,
+                        selectedVehicleForAssignment?.id === vehicle.id && styles.selectedVehicleIcon
+                      ]}>
+                        <Car size={24} color={
+                          vehicle.id === currentVehicleId ? "#FFF" : 
+                          selectedVehicleForAssignment?.id === vehicle.id ? "#FFF" : "#D97706"
+                        } />
+                      </View>
+                      <View style={styles.vehicleItemInfo}>
+                        <Text style={[
+                          styles.vehicleItemName,
+                          vehicle.id === currentVehicleId && styles.currentVehicleName,
+                          selectedVehicleForAssignment?.id === vehicle.id && styles.selectedVehicleName
+                        ]}>{vehicle.id}</Text>
+                        <View style={styles.vehicleItemDetails}>
+                          <Text style={styles.vehicleItemType}>{vehicle.type}</Text>
+                          <Text style={styles.vehicleItemCapacity}>{vehicle.capacity}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.vehicleItemRight}>
+                      <View style={[
+                        styles.vehicleItemStatus,
+                        { backgroundColor: vehicle.status === 'Available' ? '#10B981' : 
+                          vehicle.status === 'In Use' ? '#D97706' : 
+                          vehicle.status === 'Maintenance' ? '#EF4444' : '#94A3B8' }
+                      ]} />
+                      <Text style={styles.vehicleItemStatusText}>{vehicle.status}</Text>
+                      {vehicle.id === currentVehicleId && (
+                        <View style={styles.currentVehicleBadge}>
+                          <Text style={styles.currentVehicleBadgeText}>Current</Text>
+                        </View>
+                      )}
+                      {selectedVehicleForAssignment?.id === vehicle.id && (
+                        <View style={styles.selectedVehicleBadge}>
+                          <CheckCircle2 size={14} color="#FFF" />
+                          <Text style={styles.selectedVehicleBadgeText}>Selected</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Justification Section - Always render but conditionally show */}
+            <View style={[styles.justificationContainer, !selectedVehicleForAssignment && styles.justificationHidden]}>
+              <View style={styles.justificationHeader}>
+                <FileText size={20} color="#1E293B" />
+                <Text style={styles.justificationTitle}>Reassignment Justification</Text>
+              </View>
+              <TextInput
+                style={styles.justificationInput}
+                placeholder="Please provide a reason for reassigning this vehicle..."
+                placeholderTextColor="#94A3B8"
+                value={justificationText}
+                onChangeText={setJustificationText}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                editable={!!selectedVehicleForAssignment}
+              />
+            </View>
+
+            {/* Bottom Actions */}
+            <View style={styles.modalFooter}>
+              {selectedVehicleForAssignment ? (
+                <TouchableOpacity 
+                  style={[
+                    styles.assignButton,
+                    (!justificationText.trim()) && styles.assignButtonDisabled
+                  ]}
+                  onPress={handleConfirmVehicleReassignment}
+                  disabled={!justificationText.trim()}
+                >
+                  <Text style={styles.assignButtonText}>Confirm Reassignment</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.modalCancelButton}
+                  onPress={() => {
+                    setShowVehicleModal(false);
+                    setSelectedVehicleForAssignment(null);
+                    setJustificationText('');
+                  }}
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <ConfirmationAlert
+        visible={showAlert}
+        isCheckedIn={isCheckedIn}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowAlert(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -758,7 +1073,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
-    marginBottom:5
+    marginBottom: 5
   },
   badge: {
     backgroundColor: '#E0F2FE',
@@ -771,465 +1086,396 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0369A1',
   },
-  viewAllText: {
-    fontSize: 14,
-    color: '#D97706',
-    fontWeight: '600',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 5,
-  },
-  quickActionBtn: {
+  // Modal Styles
+  modalOverlay: {
     flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    marginHorizontal: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  assignmentsScroll: {
-    flexDirection: 'row',
-  },
-  assignmentCard: {
-    width: width * 0.8,
+  modalContent: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
-    marginRight: 15,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    marginBottom:10
+    maxHeight: '90%',
+    minHeight: '70%',
   },
-  assignmentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  driverInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  driverAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFBEB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  driverInitials: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#D97706',
-  },
-  driverName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  driverId: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  unassignBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#FEF2F2',
-  },
-  vehicleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  vehicleText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    flex: 1,
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  assignmentDetails: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 15,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 13,
-    color: '#475569',
-    flex: 1,
-  },
-  locationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#92400E',
-    fontWeight: '600',
-  },
-  emptyState: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#F1F5F9',
-    borderStyle: 'dashed',
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#64748B',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-  },
-  driversScroll: {
-    flexDirection: 'row',
-  },
-  driverCard: {
-    width: 120,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 15,
-    marginRight: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom:10
-  },
-  selectedDriverCard: {
-    backgroundColor: '#FFFBEB',
-    borderWidth: 2,
-    borderColor: '#D97706',
-  },
-  driverCardHeader: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  driverStatus: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 4,
   },
-  driverAvatarSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  driverInitialsSmall: {
+  modalSubtitle: {
     fontSize: 14,
-    fontWeight: 'bold',
     color: '#64748B',
   },
-  driverCardName: {
+  modalCloseButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  modalSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    marginBottom: 20,
+  },
+  modalSearchIcon: {
+    marginRight: 8,
+  },
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    padding: 0,
+  },
+  driversList: {
+    flex: 1,
+  },
+  driverItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  currentDriverItem: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#3B82F6',
+    borderWidth: 2,
+  },
+  selectedDriverItem: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+    borderWidth: 2,
+  },
+  driverItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  driverItemAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFBEB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  currentDriverAvatar: {
+    backgroundColor: '#3B82F6',
+  },
+  selectedDriverAvatar: {
+    backgroundColor: '#10B981',
+  },
+  driverItemInitials: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#D97706',
+  },
+  currentDriverInitials: {
+    color: '#FFF',
+  },
+  selectedDriverInitials: {
+    color: '#FFF',
+  },
+  driverItemInfo: {
+    flex: 1,
+  },
+  driverItemName: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 2,
   },
-  driverCardId: {
+  driverItemId: {
     fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  driverStats: {
+  driverItemStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
-  rating: {
+  driverItemRating: {
     backgroundColor: '#FFFBEB',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
   },
-  ratingText: {
-    fontSize: 12,
+  driverItemRatingText: {
+    fontSize: 11,
     color: '#92400E',
     fontWeight: '600',
   },
-  tripsText: {
+  driverItemTrips: {
     fontSize: 11,
     color: '#94A3B8',
     fontWeight: '500',
   },
-  assignedTag: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#FEF3C7',
+  driverItemRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  driverItemStatus: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  driverItemStatusText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  currentDriverBadge: {
+    backgroundColor: '#E0F2FE',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    marginTop: 4,
   },
-  assignedTagText: {
+  currentDriverBadgeText: {
     fontSize: 10,
-    color: '#92400E',
+    color: '#0369A1',
     fontWeight: '700',
   },
-  selectedIndicator: {
-    position: 'absolute',
-    bottom: -6,
-    right: -6,
+  selectedDriverBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+    gap: 4,
+  },
+  selectedDriverBadgeText: {
+    fontSize: 10,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  noDriversContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noDriversText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '600',
+  },
+  vehiclesList: {
+    flex: 1,
+  },
+  vehicleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#FFF',
     borderRadius: 12,
-    elevation: 3,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  vehiclesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    marginTop: 5,
-    gap:9
-  },
-  vehicleCard: {
-    width: (width - 60) / 3,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 15,
-    marginBottom: 12,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    position: 'relative',
-  },
-  selectedVehicleCard: {
-    backgroundColor: '#FFFBEB',
+  currentVehicleItem: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#3B82F6',
     borderWidth: 2,
-    borderColor: '#D97706',
   },
-  assignedVehicleCard: {
+  selectedVehicleItem: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+    borderWidth: 2,
+  },
+  vehicleItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  vehicleItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFFBEB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  currentVehicleIcon: {
+    backgroundColor: '#3B82F6',
+  },
+  selectedVehicleIcon: {
+    backgroundColor: '#10B981',
+  },
+  vehicleItemInfo: {
+    flex: 1,
+  },
+  vehicleItemName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  currentVehicleName: {
+    color: '#3B82F6',
+  },
+  selectedVehicleName: {
+    color: '#10B981',
+  },
+  vehicleItemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  vehicleItemType: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  vehicleItemCapacity: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  vehicleItemRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  vehicleItemStatus: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  vehicleItemStatusText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  currentVehicleBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  currentVehicleBadgeText: {
+    fontSize: 10,
+    color: '#0369A1',
+    fontWeight: '700',
+  },
+  selectedVehicleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+    gap: 4,
+  },
+  selectedVehicleBadgeText: {
+    fontSize: 10,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  noVehiclesContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noVehiclesText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '600',
+  },
+  justificationContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 16,
     backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  vehicleCardHeader: {
+  justificationHidden: {
+    display: 'none',
+  },
+  justificationHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 12,
   },
-  vehicleStatus: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  vehicleId: {
+  justificationTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#1E293B',
-    marginBottom: 4,
   },
-  selectedVehicleId: {
-    color: '#92400E',
-  },
-  disabledVehicleId: {
-    color: '#CBD5E1',
-  },
-  vehicleType: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  vehicleCapacity: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  assignedOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(248, 250, 252, 0.95)',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  assignedOverlayText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#94A3B8',
-    letterSpacing: 1,
-    transform: [{ rotate: '-45deg' }],
-  },
-  messageContainer: {
+  justificationInput: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  messageInput: {
-    padding: 20,
+    borderRadius: 8,
+    padding: 12,
     fontSize: 14,
     color: '#1E293B',
-    minHeight: 100,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    minHeight: 80,
     textAlignVertical: 'top',
   },
-  messageFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F8FAFC',
+  modalFooter: {
+    paddingTop: 20,
+    marginTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  messageHint: {
-    fontSize: 12,
-    color: '#94A3B8',
-    flex: 1,
-    marginRight: 12,
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  sendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#D97706',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  modalCancelButton: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 16,
     borderRadius: 12,
-    gap: 8,
-  },
-  sendButtonText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  summaryCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 70,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 20,
-  },
-  summaryContent: {
-    marginBottom: 20,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  summaryValue: {
+  modalCancelButtonText: {
     fontSize: 16,
-    color: '#1E293B',
     fontWeight: '700',
+    color: '#64748B',
   },
-  summaryStatus: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  confirmButton: {
-    backgroundColor: '#1E293B',
-    flexDirection: 'row',
-    justifyContent: 'center',
+  assignButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
   },
-  confirmButtonDisabled: {
+  assignButtonDisabled: {
     backgroundColor: '#CBD5E1',
   },
-  confirmButtonText: {
-    color: '#FFF',
+  assignButtonText: {
     fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });
 
