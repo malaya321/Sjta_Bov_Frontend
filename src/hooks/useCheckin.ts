@@ -25,7 +25,8 @@ export const useCheckin = (): UseCheckinReturn => {
   const checkin = useCallback(async (imageData: ImageFile | FormData): Promise<CheckinResponse> => {
     setIsLoading(true);
     setError(null);
-
+// console.log(imageData,'checkdata in to API')
+// return
     try {
       // If it's already a FormData object, use it directly
       let formData: FormData;

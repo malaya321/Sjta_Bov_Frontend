@@ -17,9 +17,10 @@ import {
   Image,
   Linking,
 } from 'react-native';
-import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle, MapPin } from 'lucide-react-native';
+import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle, MapPin, Camera } from 'lucide-react-native';
 import Geolocation from '@react-native-community/geolocation';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
+import BatteryPhotoComponent from '../../../components/BatteryPhotoComponent'; // Add this import
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
@@ -48,6 +49,7 @@ type CheckinModalProps = {
   totalLoading: boolean;
   error: string | null;
   onImageCaptured: (imageFile: ImageFile) => void;
+  onBatteryImageCaptured:(imageFile: ImageFile) => void;
   onBatteryTextChange: (text: string) => void;
   onBatteryLevelChange: (level: number) => void;
   onCheckinSuccess: () => void;
@@ -62,6 +64,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   batteryLevel,
   isIOS,
   onImageCaptured,
+  onBatteryImageCaptured,
   onBatteryTextChange,
   onBatteryLevelChange,
   onCheckinSuccess,
@@ -82,6 +85,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
+  // Add state for battery photo
+  const [batteryPhoto, setBatteryPhoto] = useState<ImageFile | null>(null);
 
   // Request location permission
   const requestLocationPermission = async (): Promise<boolean> => {
@@ -229,6 +234,17 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   });
 };
 
+  // Handle battery photo capture
+  const handleBatteryPhotoCaptured = (imageFile: ImageFile) => {
+    setBatteryPhoto(imageFile);
+    onBatteryImageCaptured(imageFile)
+  };
+
+  // Remove battery photo
+  const handleRemoveBatteryPhoto = () => {
+    setBatteryPhoto(null);
+  };
+
   // Check permission when modal opens
   useEffect(() => {
     if (visible) {
@@ -244,6 +260,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       setLocation({ latitude: null, longitude: null, accuracy: null });
       setLocationError(null);
       setIsGettingLocation(false);
+      setBatteryPhoto(null); // Reset battery photo when modal opens
     }
   }, [visible]);
 
@@ -313,7 +330,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       // Create FormData with all check-in data
       const checkinFormData = new FormData();
       
-      // Add image for verification
+      // Add face image for verification
       checkinFormData.append('image', {
         uri: capturedImageFile.uri,
         type: capturedImageFile.type || 'image/jpeg',
@@ -321,17 +338,26 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       } as any);
       
       // Add battery information
-      checkinFormData.append('battery_remarks', batteryText);
-      checkinFormData.append('battery_percentage', batteryLevel.toString());
+      checkinFormData.append('check_in_battery_status', batteryText);
+      // checkinFormData.append('battery_percentage', batteryLevel.toString());
+      
+      // Add battery photo if captured
+      if (batteryPhoto) {
+        checkinFormData.append('check_in_battery_percentage', {
+          uri: batteryPhoto.uri,
+          type: batteryPhoto.type || 'image/jpeg',
+          name: batteryPhoto.name || `battery_${Date.now()}.jpg`,
+        } as any);
+      }
       
       // Add location if available
       if (locationData.latitude && locationData.longitude) {
         checkinFormData.append('longitude', locationData.longitude.toString());
         checkinFormData.append('latitude', locationData.latitude.toString());
         
-        if (locationData.accuracy) {
-          checkinFormData.append('location_accuracy', locationData.accuracy.toString());
-        }
+        // if (locationData.accuracy) {
+        //   checkinFormData.append('location_accuracy', locationData.accuracy.toString());
+        // }
       }
 
       // Single API call for check-in (includes verification)
@@ -598,7 +624,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
             ) : currentStep === 2 ? (
               <View style={styles.stepWrapper}>
                 <Text style={styles.title}>Battery Status</Text>
-                <Text style={styles.description}>
+                {/* <Text style={styles.description}>
                   Select the current battery percentage of your vehicle.
                 </Text>
 
@@ -622,9 +648,43 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
                       ]}>{level}%</Text>
                     </TouchableOpacity>
                   ))}
+                </View> */}
+
+                {/* Battery Photo Section */}
+                <View style={styles.batteryPhotoSection}>
+                  <Text style={styles.label}>Battery Photo</Text>
+                  <Text style={styles.photoDescription}>
+                    Take a photo of your battery or meter reading
+                  </Text>
+                  
+                  {batteryPhoto ? (
+                    <View style={styles.batteryPhotoPreviewContainer}>
+                      <Image 
+                        source={{ uri: batteryPhoto.uri }}
+                        style={styles.batteryPhotoPreview}
+                      />
+                      <TouchableOpacity 
+                        style={styles.removePhotoButton}
+                        onPress={handleRemoveBatteryPhoto}
+                      >
+                        <X size={20} color="#DC2626" />
+                      </TouchableOpacity>
+                      <View style={styles.photoSuccessBadge}>
+                        <CheckCircle2 size={16} color="#22C55E" />
+                        <Text style={styles.photoSuccessText}>Photo captured</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.batteryCameraContainer}>
+                      <BatteryPhotoComponent
+                        onImageCaptured={handleBatteryPhotoCaptured}
+                        imageUri={null}
+                      />
+                    </View>
+                  )}
                 </View>
 
-                <Text style={styles.label}>Additional Remarks</Text>
+                <Text style={styles.label}>Check In Battery Status</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Battery needs charging, vehicle making noise..."
@@ -644,7 +704,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
 
                 {/* Photo Preview */}
                 <View style={styles.reviewCard}>
-                  <Text style={styles.reviewCardTitle}>Photo</Text>
+                  <Text style={styles.reviewCardTitle}>Face Photo</Text>
                   {capturedImageFile ? (
                     <Image 
                       source={{ uri: capturedImageFile.uri }}
@@ -658,20 +718,32 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
 
                 {/* Battery Review */}
                 <View style={styles.reviewCard}>
-                  <Text style={styles.reviewCardTitle}>Battery Level</Text>
+                  <Text style={styles.reviewCardTitle}>Check In Battery Status</Text>
                   <View style={styles.reviewRow}>
                     <Battery size={20} color="#64748B" />
-                    <Text style={styles.reviewValue}>{batteryLevel || 'Not selected'}%</Text>
+                    <Text style={styles.reviewValue}>{batteryText}</Text>
                   </View>
                 </View>
 
+                {/* Battery Photo Review */}
+                {batteryPhoto && (
+                  <View style={styles.reviewCard}>
+                    <Text style={styles.reviewCardTitle}>Battery Photo</Text>
+                    <Image 
+                      source={{ uri: batteryPhoto.uri }}
+                      style={styles.reviewBatteryImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+
                 {/* Remarks Review */}
-                {batteryText ? (
+                {/* {batteryText ? (
                   <View style={styles.reviewCard}>
                     <Text style={styles.reviewCardTitle}>Remarks</Text>
                     <Text style={styles.reviewValue}>{batteryText}</Text>
                   </View>
-                ) : null}
+                ) : null} */}
 
                 {/* Location Status */}
                 {/* <View style={styles.reviewCard}>
@@ -840,7 +912,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   batteryCard: {
     width: (width - 72) / 3,
@@ -1114,6 +1186,75 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Battery Photo Styles
+  batteryPhotoSection: {
+    marginBottom: 24,
+  },
+  photoDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  batteryCameraContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    marginBottom: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  batteryPhotoPreviewContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  batteryPhotoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  photoSuccessBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  photoSuccessText: {
+    fontSize: 12,
+    color: '#22C55E',
+    fontWeight: '600',
+  },
+  reviewBatteryImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+    marginTop: 8,
   },
 });
 
