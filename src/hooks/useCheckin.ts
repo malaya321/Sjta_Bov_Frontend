@@ -14,7 +14,7 @@ interface UseCheckinReturn {
   isLoading: boolean;
   error: string | null;
   checkin: (imageFile: ImageFile | FormData) => Promise<CheckinResponse>;
-  checkout: () => Promise<CheckinResponse>;
+  checkout: (formData: FormData) => Promise<CheckinResponse>;
   resetError: () => void;
 }
 
@@ -25,8 +25,7 @@ export const useCheckin = (): UseCheckinReturn => {
   const checkin = useCallback(async (imageData: ImageFile | FormData): Promise<CheckinResponse> => {
     setIsLoading(true);
     setError(null);
-// console.log(imageData,'checkdata in to API')
-// return
+    
     try {
       // If it's already a FormData object, use it directly
       let formData: FormData;
@@ -44,15 +43,12 @@ export const useCheckin = (): UseCheckinReturn => {
 
         formData = new FormData();
         
-        // ✅ CHANGE: Append with field name 'image' (not 'face_image')
+        // Append with field name 'image'
         formData.append('image', {
           uri: imageFile.uri,
           type: imageFile.type || 'image/jpeg',
           name: imageFile.name || `image_${Date.now()}.jpg`,
         } as any);
-        
-        // ✅ REMOVED: Don't add extra timestamp field unless server requires it
-        // formData.append('timestamp', new Date().toISOString());
         
         console.log('FormData field name: "image"');
         console.log('File name:', imageFile.name);
@@ -77,19 +73,23 @@ export const useCheckin = (): UseCheckinReturn => {
     }
   }, []);
 
-  const checkout = useCallback(async (
-    // driverId: string,
-    // vehicleId: string,
-    // remarks?: string
-    // formData:FormData
-  ): Promise<CheckinResponse> => {
+  const checkout = useCallback(async (formData: FormData): Promise<CheckinResponse> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      return await checkinService.checkout();
+      console.log('Sending FormData to checkout service...');
+      
+      // Call the service with FormData
+      const result = await checkinService.checkout(formData);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Check-out failed');
+      }
+
+      return result;
     } catch (err: any) {
-      const message = err?.message || 'Check-out failed.';
+      const message = err?.message || 'Check-out failed. Please try again.';
       setError(message);
       throw new Error(message);
     } finally {

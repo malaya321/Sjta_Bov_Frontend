@@ -14,7 +14,10 @@ type AttendanceSectionProps = {
   isCheckedIn: boolean;
   isLoggingOut: boolean;
   totalLoading: boolean;
+  checkinTime: string | null;
+  checkoutTime: string | null;
   onCheckinPress: () => void;
+  onCheckoutPress: () => void;
 };
 
 const AttendanceSection: React.FC<AttendanceSectionProps> = ({
@@ -23,8 +26,37 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
   isCheckedIn,
   isLoggingOut,
   totalLoading,
+  checkinTime,
+  checkoutTime,
   onCheckinPress,
+  onCheckoutPress,
 }) => {
+  
+  const handleButtonPress = () => {
+    console.log('Button pressed - isCheckedIn:', isCheckedIn);
+    if (isCheckedIn) {
+      console.log('Calling onCheckoutPress');
+      onCheckoutPress();
+    } else {
+      console.log('Calling onCheckinPress');
+      onCheckinPress();
+    }
+  };
+
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return '';
+    try {
+      const date = new Date(timeString);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -53,7 +85,11 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                 {isCheckedIn ? 'Shift Active' : 'Off-Duty'}
               </Text>
               <Text style={styles.attendanceTime}>
-                {isCheckedIn ? 'Check-in: 08:30 AM' : 'Check-in Required'}
+                {isCheckedIn 
+                  ? `Check-in: ${formatTime(checkinTime)}` 
+                  : checkoutTime 
+                    ? `Last check-out: ${formatTime(checkoutTime)}`
+                    : 'Check-in Required'}
               </Text>
             </View>
           </View>
@@ -65,7 +101,7 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
               !isCheckedIn && isIOS && styles.iosPrimaryButton,
               (isLoggingOut || totalLoading) && styles.buttonDisabled
             ]}
-            onPress={onCheckinPress}
+            onPress={handleButtonPress}
             activeOpacity={0.7}
             disabled={isLoggingOut || totalLoading}
           >

@@ -10,7 +10,6 @@ import {
   StatusBar,
   Platform,
   Alert,
-  Image,
   Dimensions,
 } from 'react-native';
 import {
@@ -29,8 +28,9 @@ import HeaderSection from './components/HeaderSection';
 import AttendanceSection from './components/AttendanceSection';
 import VehicleSection from './components/VehicleSection';
 import CheckinModal from './components/CheckinModal';
+import CheckoutModal from './components/CheckoutModal';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
 const isSmallDevice = width < 375;
 
@@ -44,23 +44,37 @@ type ImageFile = {
 const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [vehicleStatus, setVehicleStatus] = useState('Idle');
-  const [batteryLevel, setBatteryLevel] = useState(82);
-  const [batteryText, setBatteryText] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
-  const [showCheckoutAlert, setShowCheckoutAlert] = useState(false);
-  const [showImageCaptureAlert, setShowImageCaptureAlert] = useState(false); // New state for image capture confirmation
-  const [capturedImageFile, setCapturedImageFile] = useState<ImageFile | null>(null);
-  const [checkedInData, setIsCheckedInData] = useState();
+  const [checkinTime, setCheckinTime] = useState<string | null>(null);
+  
+  // Check-in state
+  const [checkinBatteryLevel, setCheckinBatteryLevel] = useState(82);
+  const [checkinBatteryText, setCheckinBatteryText] = useState('');
+  const [checkinCapturedImageFile, setCheckinCapturedImageFile] = useState<ImageFile | null>(null);
+  
+  // Check-out state
+  const [checkoutBatteryLevel, setCheckoutBatteryLevel] = useState(82);
+  const [checkoutBatteryText, setCheckoutBatteryText] = useState('');
+  const [checkoutCapturedImageFile, setCheckoutCapturedImageFile] = useState<ImageFile | null>(null);
+  const [password, setPassword] = useState(''); // For password input during checkout
 
   useEffect(() => {
     const loadCheckinStatus = async () => {
       try {
-        const checkinTime = await AsyncStorage.getItem('checkinTime');
-        if (checkinTime) {
+        const storedCheckinTime = await AsyncStorage.getItem('checkinTime');
+        console.log('Loaded checkinTime from storage:', storedCheckinTime);
+        if (storedCheckinTime) {
           setIsCheckedIn(true);
+          setCheckinTime(storedCheckinTime);
+          setVehicleStatus('Running');
+        } else {
+          setIsCheckedIn(false);
+          setCheckinTime(null);
+          setVehicleStatus('Idle');
         }
       } catch (error) {
         console.error('Error loading check-in status:', error);
@@ -71,7 +85,13 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   }, []);
   
   const logoutMutation = useLogout();
-  const { checkin, checkout, isLoading: checkinLoading, error, resetError } = useCheckin();
+  const { 
+    checkin, 
+    checkout, 
+    isLoading: checkinLoading, 
+    error: checkinError, 
+    resetError 
+  } = useCheckin();
 
   const driverData = {
     name: "Rajesh Kumar",
@@ -86,41 +106,73 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     onLogout();
   };
 
-  const confirmCheckout = async () => {
-    const checkOutResult = await checkout();
-    // console.log(checkOutResult,'checkOutResult')
-    if(checkOutResult?.status){
-      
-    setIsCheckedIn(false);
-    setVehicleStatus('Idle');
-    setShowCheckoutAlert(false);
-    AsyncStorage.removeItem('checkinTime');
-    }
-  };
-
-  const handleImageCaptured = (imageFile: ImageFile) => {
-    console.log('Image captured for check-in:', imageFile);
-    setCapturedImageFile(imageFile);
-    // Show ConfirmationAlert instead of Alert.alert
-    setShowImageCaptureAlert(true);
-  };
-
-  const handleContinueToBattery = () => {
-    // This function is called when user taps "Continue" on the image capture confirmation
-    setShowImageCaptureAlert(false);
-    // You can add any additional logic here if needed
-  };
-
+  // Check-in Handlers
   const handleCheckinFlow = () => {
     if (!isCheckedIn) {
-      setShowAuthModal(true);
-      setCapturedImageFile(null);
-      setBatteryText('');
-      setBatteryLevel(82);
+      setShowCheckinModal(true);
+      setCheckinCapturedImageFile(null);
+      setCheckinBatteryText('');
+      setCheckinBatteryLevel(82);
+      resetError();
+    }
+  };
+
+  const handleCheckinImageCaptured = (imageFile: ImageFile) => {
+    console.log('Image captured for check-in:', imageFile);
+    setCheckinCapturedImageFile(imageFile);
+  };
+
+  const handleCheckinSuccess = async (checkinData?: any) => {
+    setIsCheckedIn(true);
+    setVehicleStatus('Running');
+    setShowCheckinModal(false);
+    setCheckinCapturedImageFile(null);
+    setCheckinBatteryText('');
+    
+    // Store check-in time if it's in the response
+    if (checkinData?.data?.check_in) {
+      await AsyncStorage.setItem('checkinTime', checkinData.data.check_in);
+      setCheckinTime(checkinData.data.check_in);
+    }
+    
+    Alert.alert('Success', 'You have successfully checked in!');
+  };
+
+  // Check-out Handlers
+  const handleCheckoutFlow = () => {
+    console.log('handleCheckoutFlow called - isCheckedIn:', isCheckedIn);
+    if (isCheckedIn) {
+      console.log('Opening checkout modal');
+      setShowCheckoutModal(true);
+      setCheckoutCapturedImageFile(null);
+      setCheckoutBatteryText('');
+      setCheckoutBatteryLevel(82);
+      setPassword('');
       resetError();
     } else {
-      setShowCheckoutAlert(true);
+      console.log('Cannot checkout - not checked in');
     }
+  };
+
+  const handleCheckoutImageCaptured = (imageFile: ImageFile) => {
+    console.log('Image captured for check-out:', imageFile);
+    setCheckoutCapturedImageFile(imageFile);
+  };
+
+  const handleCheckoutSuccess = async () => {
+    setIsCheckedIn(false);
+    setVehicleStatus('Idle');
+    setShowCheckoutModal(false);
+    setCheckoutCapturedImageFile(null);
+    setCheckoutBatteryText('');
+    setPassword('');
+    await AsyncStorage.removeItem('checkinTime');
+    setCheckinTime(null);
+    Alert.alert('Success', 'You have successfully checked out!');
+  };
+
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
   };
 
   const handleStatusChange = (status: string) => {
@@ -132,15 +184,6 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         [{ text: 'OK' }]
       );
     }
-  };
-
-  const handleCheckinSuccess = () => {
-    setIsCheckedIn(true);
-    setVehicleStatus('Running');
-    setShowAuthModal(false);
-    setCapturedImageFile(null);
-    setBatteryText('');
-    Alert.alert('Success', 'You have successfully checked in!');
   };
 
   const isLoggingOut = logoutMutation.isPending;
@@ -181,6 +224,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             isLoggingOut={isLoggingOut}
             totalLoading={totalLoading}
             onCheckinPress={handleCheckinFlow}
+            onCheckoutPress={handleCheckoutFlow}
           />
 
           <VehicleSection
@@ -191,7 +235,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             isLoggingOut={isLoggingOut}
             totalLoading={totalLoading}
             vehicleStatus={vehicleStatus}
-            batteryLevel={batteryLevel}
+            batteryLevel={isCheckedIn ? 82 : 0}
             onStatusChange={handleStatusChange}
           />
 
@@ -248,27 +292,56 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         </View>
       </ScrollView>
 
+      {/* Check-in Modal */}
       <CheckinModal
-        visible={showAuthModal}
+        visible={showCheckinModal}
         onClose={() => {
           if (!totalLoading) {
-            setShowAuthModal(false);
-            setCapturedImageFile(null);
-            setBatteryText('');
+            setShowCheckinModal(false);
+            setCheckinCapturedImageFile(null);
+            setCheckinBatteryText('');
           }
         }}
-        capturedImageFile={capturedImageFile}
-        batteryText={batteryText}
-        batteryLevel={batteryLevel}
+        capturedImageFile={checkinCapturedImageFile}
+        batteryText={checkinBatteryText}
+        batteryLevel={checkinBatteryLevel}
         isIOS={isIOS}
         isSmallDevice={isSmallDevice}
         totalLoading={totalLoading}
-        error={error}
-        onImageCaptured={handleImageCaptured}
-        onBatteryTextChange={setBatteryText}
-        onBatteryLevelChange={setBatteryLevel}
+        error={checkinError}
+        onImageCaptured={handleCheckinImageCaptured}
+        onBatteryTextChange={setCheckinBatteryText}
+        onBatteryLevelChange={setCheckinBatteryLevel}
         onCheckinSuccess={handleCheckinSuccess}
         checkin={checkin}
+      />
+      
+      {/* Check-out Modal */}
+      <CheckoutModal
+        visible={showCheckoutModal}
+        onClose={() => {
+          if (!totalLoading) {
+            setShowCheckoutModal(false);
+            setCheckoutCapturedImageFile(null);
+            setCheckoutBatteryText('');
+            setPassword('');
+          }
+        }}
+        capturedImageFile={checkoutCapturedImageFile}
+        batteryText={checkoutBatteryText}
+        batteryLevel={checkoutBatteryLevel}
+        password={password}
+        checkinTime={checkinTime}
+        isIOS={isIOS}
+        isSmallDevice={isSmallDevice}
+        totalLoading={totalLoading}
+        error={checkinError}
+        onImageCaptured={handleCheckoutImageCaptured}
+        onBatteryTextChange={setCheckoutBatteryText}
+        onBatteryLevelChange={setCheckoutBatteryLevel}
+        onPasswordChange={handlePasswordChange}
+        onCheckoutSuccess={handleCheckoutSuccess}
+        checkout={checkout}
       />
       
       {/* Logout Confirmation Alert */}
@@ -279,28 +352,6 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         onCancel={() => setShowAlert(false)}
       />
       
-      {/* Checkout Confirmation Alert */}
-      <ConfirmationAlert
-        title='Check Out'
-        message='Are you sure you want to check out?'
-        confirmText='Check Out'
-        visible={showCheckoutAlert}
-        isCheckedIn={isCheckedIn}
-        onConfirm={confirmCheckout}
-        onCancel={() => setShowCheckoutAlert(false)}
-      />
-      
-      {/* Image Capture Confirmation Alert - This replaces the Alert.alert */}
-      <ConfirmationAlert
-        title='Success!'
-        message='Face image captured successfully! Tap Continue to proceed to battery status.'
-        confirmText='Continue'
-        visible={showImageCaptureAlert}
-        isCheckedIn={isCheckedIn}
-        onConfirm={handleContinueToBattery}
-        onCancel={() => setShowImageCaptureAlert(false)}
-      />
-      
       <View style={styles.footer}>
         <Text style={styles.mantraText}>ॐ जय जगन्नाथ</Text>
         <Text style={styles.footerText}>SJTA Driver Portal v1.0.0</Text>
@@ -309,7 +360,6 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   );
 };
 
-// Styles remain the same as in your original code
 const styles = StyleSheet.create({
   container: {
     flex: 1,

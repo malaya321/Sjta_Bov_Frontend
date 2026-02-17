@@ -1,6 +1,7 @@
 // src/services/checkin.service.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axiosInstance';
+import { Alert } from 'react-native';
 
 export interface CheckinResponse {
   success: boolean;
@@ -9,7 +10,8 @@ export interface CheckinResponse {
   data?: {
     driver_id?: string;
     name?: string;
-    checkin_time?: string;
+    check_in?: string;
+    check_out?: string;
   };
   error?: string;
 }
@@ -20,61 +22,70 @@ class CheckinService {
    */
   async checkin(formData: FormData): Promise<CheckinResponse> {
     try {
-      console.log(formData, '📤 Sending check-in request');
+      console.log('📤 Sending check-in request');
       
-      // ✅ Using the centralized api instance - token is automatically added by interceptor
+      // Using the centralized api instance - token is automatically added by interceptor
       const response = await api.post(
         '/check-in',
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data', // Important for file upload
-            // Authorization header is automatically added by the interceptor
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
 
       console.log('✅ Check-in successful:', response.data);
+      
+      // Store check-in time if available in response
+      if (response.data?.data?.check_in) {
+        await AsyncStorage.setItem('checkinTime', response.data.data.check_in);
+      }
+      
       return response.data;
 
     } catch (error: any) {
       console.error('❌ Check-in error:', error);
-
-      // ✅ Error handling is now centralized in axiosInstance.ts
-      // Just re-throw the formatted error from the interceptor
       throw error;
     }
   }
 
   /**
-   * ✅ Checkout (Send check-in time)
+   * ✅ Checkout with complete FormData
    */
-  async checkout(): Promise<CheckinResponse> {
+  async checkout(formData: FormData): Promise<CheckinResponse> {
     try {
-      // Retrieve check-in time from AsyncStorage
-      const checkinTime = await AsyncStorage.getItem('checkinTime');
+      console.log('📤 Sending checkout request with FormData');
       
-      if (!checkinTime) {
-        throw new Error('Check-in time not found in AsyncStorage');
+      // Log FormData contents for debugging
+      // @ts-ignore
+      if (formData._parts) {
+        // @ts-ignore
+        formData._parts.forEach((part: any) => {
+          console.log(`FormData field: ${part[0]}`, part[1]?.uri ? '[Image File]' : part[1]);
+        });
       }
-
-      console.log('📤 Sending checkout request with check-in time:', checkinTime);
-
-      // Make the API call with the check-in time
-      const response = await api.post('/check-out', { check_in: checkinTime });
-
+      // Make the API call with FormData
+      const response = await api.post('/check-out', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       console.log('✅ Checkout successful:', response.data);
+      // Remove check-in time from storage on successful checkout
+      if (response.data?.status === 1) {
+        await AsyncStorage.removeItem('checkinTime');
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('❌ Check-out error:', error);
-
-      // Rethrow the error for centralized error handling
       throw error;
     }
   }
 
   /**
-   * ✅ Get check-in history (if available)
+   * ✅ Get check-in history
    */
   async getCheckinHistory(driverId?: string, date?: string): Promise<any> {
     try {
@@ -124,24 +135,52 @@ class CheckinService {
   }
 
   /**
-   * ✅ Create FormData from image and additional data
+   * ✅ Create FormData for checkout with all required fields
    */
-  createCheckinFormData(imageUri: string, additionalData?: Record<string, any>): FormData {
+  createCheckoutFormData(
+    faceImageUri: string,
+    batteryPhotoUri: string | null,
+    batteryStatus: string,
+    password: string,
+    checkinTime: string,
+    latitude: number | null,
+    longitude: number | null
+  ): FormData {
     const formData = new FormData();
     
-    // Add image file
-    const imageFile = {
-      uri: imageUri,
+    // Add face image
+    const faceImageFile = {
+      uri: faceImageUri,
       type: 'image/jpeg',
-      name: 'checkin_photo.jpg',
+      name: `checkout_face_${Date.now()}.jpg`,
     };
-    formData.append('image', imageFile as any);
+    formData.append('image', faceImageFile as any);
     
-    // Add additional data if provided
-    if (additionalData) {
-      Object.entries(additionalData).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
+    // Add password
+    if (password) {
+      formData.append('password', password);
+    }
+    
+    // Add check-in time
+    formData.append('check_in', checkinTime);
+    
+    // Add battery photo if available
+    if (batteryPhotoUri) {
+      const batteryPhotoFile = {
+        uri: batteryPhotoUri,
+        type: 'image/jpeg',
+        name: `checkout_battery_${Date.now()}.jpg`,
+      };
+      formData.append('check_out_battery_percentage', batteryPhotoFile as any);
+    }
+    
+    // Add battery status text
+    formData.append('check_out_battery_status', batteryStatus);
+    
+    // Add location if available
+    if (latitude && longitude) {
+      formData.append('latitude', latitude.toString());
+      formData.append('longitude', longitude.toString());
     }
     
     return formData;
