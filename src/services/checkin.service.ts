@@ -1,7 +1,7 @@
 // src/services/checkin.service.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axiosInstance';
-import { Alert } from 'react-native';
+
 
 export interface CheckinResponse {
   success: boolean;
