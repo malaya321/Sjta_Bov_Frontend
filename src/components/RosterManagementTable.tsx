@@ -1,3 +1,4 @@
+// src/components/RosterManagementTable.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -30,9 +31,37 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// Types
-interface RosterEntry {
-  id: string;
+// Updated Types to match your API response structure
+export interface RosterMapping {
+  mapping_id: number;
+  driver_id: number;
+  driver_name: string;
+  driver_mobile: string;
+  vehicle_id: number;
+  vehicle_number: string;
+  status: number;
+}
+
+export interface RosterMaster {
+  roster_master_id: number;
+  roster_id: string;
+  shift_id: number;
+  shift_name: string;
+  shift_start_time: string;
+  shift_end_time: string;
+  is_overnight_shift: boolean;
+  roster_date: string;
+  current_time: string;
+  mappings: RosterMapping[];
+  total_drivers: number;
+}
+
+export interface RosterEntry {
+  id: string; // This will be mapping_id as string
+  roster_master_id: number;
+  roster_id: string;
+  shift_id: number;
+  shift_name: string;
   driverName: string;
   vehicleName: string;
   shiftTime: string;
@@ -42,6 +71,14 @@ interface RosterEntry {
   rosterDate: string;
   status: 'Active' | 'Completed' | 'Scheduled' | 'Cancelled';
   vehicleOperationalStatus: 'Operational' | 'Maintenance' | 'Out of Service' | 'Reserved';
+  startTime?: string;
+  endTime?: string;
+  route?: string;
+  notes?: string;
+  // Additional fields
+  driver_id?: number;
+  vehicle_id?: number;
+  mapping_id?: number;
 }
 
 interface RosterManagementTableProps {
@@ -50,16 +87,72 @@ interface RosterManagementTableProps {
   onReassignVehicle: (rosterId: string, currentVehicle: string) => void;
   onEditRoster: (roster: RosterEntry) => void;
   onViewDetails: (roster: RosterEntry) => void;
+  // onCancelRoster: (rosterId: string, reason: string) => void;
 }
 
-// Action Modal Component - Defined outside main component
+// Helper functions
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'Active': return '#10B981';
+    case 'Completed': return '#64748B';
+    case 'Scheduled': return '#3B82F6';
+    case 'Cancelled': return '#EF4444';
+    default: return '#64748B';
+  }
+};
+
+const getStatusBackgroundColor = (status: string) => {
+  switch (status) {
+    case 'Active': return '#D1FAE5';
+    case 'Completed': return '#F1F5F9';
+    case 'Scheduled': return '#DBEAFE';
+    case 'Cancelled': return '#FEE2E2';
+    default: return '#F1F5F9';
+  }
+};
+
+const getRosterTypeColor = (type: string) => {
+  switch (type) {
+    case 'Regular': return '#3B82F6';
+    case 'Extra': return '#10B981';
+    case 'Emergency': return '#EF4444';
+    case 'Training': return '#8B5CF6';
+    default: return '#64748B';
+  }
+};
+
+const getRosterTypeBackgroundColor = (type: string) => {
+  switch (type) {
+    case 'Regular': return '#DBEAFE';
+    case 'Extra': return '#D1FAE5';
+    case 'Emergency': return '#FEE2E2';
+    case 'Training': return '#EDE9FE';
+    default: return '#F1F5F9';
+  }
+};
+
+// Format time from time string
+const formatTime = (timeString: string): string => {
+  if (!timeString) return '--:--';
+  try {
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (error) {
+    return timeString;
+  }
+};
+
+// Action Modal Component
 const ActionModal = ({ 
   visible, 
   onClose, 
   selectedRoster, 
   onReassignDriver, 
   onReassignVehicle, 
-  onEditRoster 
+  onEditRoster,
+  // onCancelRoster
 }: { 
   visible: boolean;
   onClose: () => void;
@@ -67,86 +160,137 @@ const ActionModal = ({
   onReassignDriver: (rosterId: string, currentDriver: string) => void;
   onReassignVehicle: (rosterId: string, currentVehicle: string) => void;
   onEditRoster: (roster: RosterEntry) => void;
-}) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onClose}
-  >
-    <TouchableOpacity 
-      style={styles.modalOverlay}
-      activeOpacity={1}
-      onPress={onClose}
-    >
-      <View style={styles.actionModalContent}>
-        <View style={styles.actionModalHeader}>
-          <Text style={styles.actionModalTitle}>Manage Roster</Text>
-          <Text style={styles.actionModalSubtitle}>
-            {selectedRoster?.driverName} - {selectedRoster?.vehicleName}
-          </Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => {
-            onClose();
-            if (selectedRoster) {
-              onReassignDriver(selectedRoster.id, selectedRoster.driverName);
-            }
-          }}
-        >
-          <User size={20} color="#D97706" />
-          <View style={styles.actionTextContainer}>
-            <Text style={styles.actionButtonTitle}>Reassign Driver</Text>
-            <Text style={styles.actionButtonSubtitle}>Change driver for this roster</Text>
-          </View>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => {
-            onClose();
-            if (selectedRoster) {
-              onReassignVehicle(selectedRoster.id, selectedRoster.vehicleName);
-            }
-          }}
-        >
-          <Car size={20} color="#D97706" />
-          <View style={styles.actionTextContainer}>
-            <Text style={styles.actionButtonTitle}>Reassign Vehicle</Text>
-            <Text style={styles.actionButtonSubtitle}>Change vehicle for this roster</Text>
-          </View>
-        </TouchableOpacity>
-        
-        {/* <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => {
-            onClose();
-            if (selectedRoster) {
-              onEditRoster(selectedRoster);
-            }
-          }}
-        >
-          <Edit size={20} color="#3B82F6" />
-          <View style={styles.actionTextContainer}>
-            <Text style={styles.actionButtonTitle}>Edit Roster</Text>
-            <Text style={styles.actionButtonSubtitle}>Modify roster details</Text>
-          </View>
-        </TouchableOpacity> */}
-        
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.cancelButton]}
-          onPress={onClose}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  </Modal>
-);
+  // onCancelRoster: (rosterId: string, reason: string) => void;
+}) => {
+  const [cancelReason, setCancelReason] = useState('');
+  const [showCancelInput, setShowCancelInput] = useState(false);
 
-// Filter Modal Component - Defined outside main component
+  const handleCancelPress = () => {
+    if (showCancelInput) {
+      if (!cancelReason.trim()) {
+        Alert.alert('Error', 'Please provide a reason for cancellation');
+        return;
+      }
+      if (selectedRoster) {
+        // onCancelRoster(selectedRoster.id, cancelReason);
+      }
+      setShowCancelInput(false);
+      setCancelReason('');
+      onClose();
+    } else {
+      setShowCancelInput(true);
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        setShowCancelInput(false);
+        setCancelReason('');
+        onClose();
+      }}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => {
+          setShowCancelInput(false);
+          setCancelReason('');
+          onClose();
+        }}
+      >
+        <View style={styles.actionModalContent}>
+          <View style={styles.actionModalHeader}>
+            <Text style={styles.actionModalTitle}>Manage Roster</Text>
+            <Text style={styles.actionModalSubtitle}>
+              {selectedRoster?.driverName || 'Unknown'} - {selectedRoster?.roster_id || 'Unknown'}
+            </Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              onClose();
+              if (selectedRoster) {
+                onReassignDriver(
+                  selectedRoster.id, 
+                  selectedRoster.driverName
+                );
+              }
+            }}
+          >
+            <User size={20} color="#D97706" />
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionButtonTitle}>Reassign Driver</Text>
+              <Text style={styles.actionButtonSubtitle}>Change driver for this roster</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              onClose();
+              if (selectedRoster) {
+                onReassignVehicle(
+                  selectedRoster.id, 
+                  selectedRoster.vehicleName
+                );
+              }
+            }}
+          >
+            <Car size={20} color="#D97706" />
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionButtonTitle}>Reassign Vehicle</Text>
+              <Text style={styles.actionButtonSubtitle}>Change vehicle for this roster</Text>
+            </View>
+          </TouchableOpacity>
+          
+          {/* {selectedRoster?.status === 'Active' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.cancelActionButton]}
+              onPress={handleCancelPress}
+            >
+              <XCircle size={20} color="#EF4444" />
+              <View style={styles.actionTextContainer}>
+                <Text style={[styles.actionButtonTitle, { color: '#EF4444' }]}>Cancel Roster</Text>
+                <Text style={styles.actionButtonSubtitle}>Cancel this roster</Text>
+              </View>
+            </TouchableOpacity>
+          )} */}
+
+          {showCancelInput && (
+            <View style={styles.cancelInputContainer}>
+              <TextInput
+                style={styles.cancelInput}
+                placeholder="Enter cancellation reason..."
+                value={cancelReason}
+                onChangeText={setCancelReason}
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+          )}
+          
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.cancelButton]}
+            onPress={() => {
+              setShowCancelInput(false);
+              setCancelReason('');
+              onClose();
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+// Filter Modal Component
 const FilterModal = ({ 
   visible, 
   onClose, 
@@ -159,13 +303,20 @@ const FilterModal = ({
   visible: boolean;
   onClose: () => void;
   data: RosterEntry[];
-  statusFilter: string;
+  statusFilter: string | 'all';
   zoneFilter: string;
-  onStatusFilterChange: (status: string) => void;
+  onStatusFilterChange: (status: string | 'all') => void;
   onZoneFilterChange: (zone: string) => void;
 }) => {
+  // Extract unique zones from data
   const zones = [...new Set(data.map(item => item.zoneName))];
-  const statuses = ['all', 'Active', 'Completed', 'Scheduled', 'Cancelled'];
+  const statuses = [
+    { label: 'All', value: 'all' },
+    { label: 'Active', value: 'Active' },
+    { label: 'Completed', value: 'Completed' },
+    { label: 'Scheduled', value: 'Scheduled' },
+    { label: 'Cancelled', value: 'Cancelled' }
+  ];
 
   return (
     <Modal
@@ -188,18 +339,18 @@ const FilterModal = ({
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {statuses.map((status) => (
                 <TouchableOpacity
-                  key={status}
+                  key={status.label}
                   style={[
                     styles.filterChip,
-                    statusFilter === status && styles.filterChipActive
+                    statusFilter === status.value && styles.filterChipActive
                   ]}
-                  onPress={() => onStatusFilterChange(status)}
+                  onPress={() => onStatusFilterChange(status.value as any)}
                 >
                   <Text style={[
                     styles.filterChipText,
-                    statusFilter === status && styles.filterChipTextActive
+                    statusFilter === status.value && styles.filterChipTextActive
                   ]}>
-                    {status === 'all' ? 'All' : status}
+                    {status.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -256,61 +407,39 @@ const RosterManagementTable = ({
   onReassignDriver,
   onReassignVehicle,
   onEditRoster,
-  onViewDetails
+  onViewDetails,
+  // onCancelRoster
 }: RosterManagementTableProps) => {
   const [selectedRoster, setSelectedRoster] = useState<RosterEntry | null>(null);
   const [showActions, setShowActions] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string | 'all'>('all');
   const [zoneFilter, setZoneFilter] = useState<string>('all');
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-  // Determine if we're on mobile or web/tablet - call unconditionally
+  // Determine if we're on mobile
   const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
 
   // Filter data based on search and filters
   const filteredData = data.filter(item => {
+    const driverName = item.driverName?.toLowerCase() || '';
+    const vehicleName = item.vehicleName?.toLowerCase() || '';
+    const rosterId = item.roster_id?.toLowerCase() || '';
+    const zoneName = item.zoneName?.toLowerCase() || '';
+    const searchLower = searchQuery.toLowerCase();
+
     const matchesSearch = 
-      item.driverName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.vehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.zoneName.toLowerCase().includes(searchQuery.toLowerCase());
+      driverName.includes(searchLower) ||
+      vehicleName.includes(searchLower) ||
+      rosterId.includes(searchLower) ||
+      zoneName.includes(searchLower);
     
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     const matchesZone = zoneFilter === 'all' || item.zoneName === zoneFilter;
     
     return matchesSearch && matchesStatus && matchesZone;
   });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return '#10B981';
-      case 'Completed': return '#64748B';
-      case 'Scheduled': return '#3B82F6';
-      case 'Cancelled': return '#EF4444';
-      default: return '#64748B';
-    }
-  };
-
-  const getOperationalStatusColor = (status: string) => {
-    switch (status) {
-      case 'Operational': return '#10B981';
-      case 'Maintenance': return '#D97706';
-      case 'Out of Service': return '#EF4444';
-      case 'Reserved': return '#3B82F6';
-      default: return '#64748B';
-    }
-  };
-
-  const getRosterTypeColor = (type: string) => {
-    switch (type) {
-      case 'Regular': return '#3B82F6';
-      case 'Extra': return '#10B981';
-      case 'Emergency': return '#EF4444';
-      case 'Training': return '#8B5CF6';
-      default: return '#64748B';
-    }
-  };
 
   // Render table view for web/tablet
   const renderTableView = () => (
@@ -322,9 +451,8 @@ const RosterManagementTable = ({
         <Text style={[styles.headerCell, { flex: 1 }]}>Roster Type</Text>
         <Text style={[styles.headerCell, { flex: 1.2 }]}>Supervisor</Text>
         <Text style={[styles.headerCell, { flex: 1 }]}>Zone</Text>
-        <Text style={[styles.headerCell, { flex: 1 }]}>Date</Text>
+        <Text style={[styles.headerCell, { flex: 1 }]}>Roster Date</Text>
         <Text style={[styles.headerCell, { flex: 1 }]}>Status</Text>
-        <Text style={[styles.headerCell, { flex: 1.5 }]}>Vehicle Status</Text>
         <Text style={[styles.headerCell, { flex: 0.8 }]}>Action</Text>
       </View>
 
@@ -349,95 +477,93 @@ const RosterManagementTable = ({
                 </Text>
               </View>
             ) : (
-              filteredData.map((item, index) => (
-                <View key={item.id} style={[
-                  styles.tableRow,
-                  index % 2 === 0 && styles.rowEven
-                ]}>
-                  <View style={[styles.cell, { flex: 1.5 }]}>
-                    <View style={styles.driverInfo}>
-                      <View style={styles.driverAvatar}>
-                        <Text style={styles.driverInitials}>
-                          {item.driverName.split(' ').map(n => n[0]).join('')}
+              filteredData.map((item, index) => {
+                const [startTime, endTime] = item.shiftTime.split(' - ');
+                return (
+                  <View key={item.id} style={[
+                    styles.tableRow,
+                    index % 2 === 0 && styles.rowEven
+                  ]}>
+                    <View style={[styles.cell, { flex: 1.5 }]}>
+                      <View style={styles.driverInfo}>
+                        <View style={styles.driverAvatar}>
+                          <Text style={styles.driverInitials}>
+                            {item.driverName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={styles.driverNameText}>
+                          {item.driverName}
                         </Text>
                       </View>
-                      <Text style={styles.driverNameText}>{item.driverName}</Text>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1.2 }]}>
+                      <View style={styles.vehicleInfo}>
+                        <Car size={16} color="#64748B" />
+                        <Text style={styles.vehicleNameText}>
+                          {item.vehicleName}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <View style={styles.timeInfo}>
+                        <Clock size={14} color="#64748B" />
+                        <Text style={styles.cellText}>
+                          {formatTime(startTime)} - {formatTime(endTime)}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <View style={[styles.rosterTypeBadge, { backgroundColor: getRosterTypeBackgroundColor(item.rosterType) }]}>
+                        <Text style={[styles.rosterTypeText, { color: getRosterTypeColor(item.rosterType) }]}>
+                          {item.rosterType}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1.2 }]}>
+                      <Text style={styles.cellText}>{item.supervisorName}</Text>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <View style={styles.zoneInfo}>
+                        <MapPin size={14} color="#64748B" />
+                        <Text style={styles.cellText}>{item.zoneName}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <View style={styles.dateInfo}>
+                        <Calendar size={14} color="#64748B" />
+                        <Text style={styles.cellText}>{item.rosterDate}</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusBackgroundColor(item.status) }]}>
+                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+                        <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                          {item.status}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={[styles.cell, { flex: 0.8 }]}>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => {
+                          setSelectedRoster(item);
+                          setShowActions(true);
+                        }}
+                      >
+                        <MoreVertical size={20} color="#64748B" />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  
-                  <View style={[styles.cell, { flex: 1.2 }]}>
-                    <View style={styles.vehicleInfo}>
-                      <Car size={16} color="#64748B" />
-                      <Text style={styles.vehicleNameText}>{item.vehicleName}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <View style={styles.timeInfo}>
-                      <Clock size={14} color="#64748B" />
-                      <Text style={styles.cellText}>{item.shiftTime}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <View style={[styles.rosterTypeBadge, { backgroundColor: `${getRosterTypeColor(item.rosterType)}20` }]}>
-                      <Text style={[styles.rosterTypeText, { color: getRosterTypeColor(item.rosterType) }]}>
-                        {item.rosterType}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1.2 }]}>
-                    <Text style={styles.cellText}>{item.supervisorName}</Text>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <View style={styles.zoneInfo}>
-                      <MapPin size={14} color="#64748B" />
-                      <Text style={styles.cellText}>{item.zoneName}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <View style={styles.dateInfo}>
-                      <Calendar size={14} color="#64748B" />
-                      <Text style={styles.cellText}>{item.rosterDate}</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                      <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                        {item.status}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 1.5 }]}>
-                    <View style={[styles.operationalStatusBadge, { backgroundColor: `${getOperationalStatusColor(item.vehicleOperationalStatus)}20` }]}>
-                      {item.vehicleOperationalStatus === 'Operational' && <CheckCircle size={14} color="#10B981" />}
-                      {item.vehicleOperationalStatus === 'Maintenance' && <AlertCircle size={14} color="#D97706" />}
-                      {item.vehicleOperationalStatus === 'Out of Service' && <XCircle size={14} color="#EF4444" />}
-                      <Text style={[styles.operationalStatusText, { color: getOperationalStatusColor(item.vehicleOperationalStatus) }]}>
-                        {item.vehicleOperationalStatus}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={[styles.cell, { flex: 0.8 }]}>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => {
-                        setSelectedRoster(item);
-                        setShowActions(true);
-                      }}
-                    >
-                      <MoreVertical size={20} color="#64748B" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+                );
+              })
             )}
           </ScrollView>
         </View>
@@ -445,7 +571,7 @@ const RosterManagementTable = ({
     </View>
   );
 
-  // Render mobile view - COMPACT CARD
+  // Render mobile view
   const renderMobileView = () => (
     <ScrollView 
       showsVerticalScrollIndicator={false}
@@ -464,18 +590,20 @@ const RosterManagementTable = ({
       ) : (
         filteredData.map((item) => {
           const isExpanded = expandedCard === item.id;
+          const driverInitials = item.driverName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          const [startTime, endTime] = item.shiftTime.split(' - ');
           
           return (
             <View key={item.id} style={styles.cardWrapper}>
               <TouchableOpacity
                 style={styles.compactCard}
-                onPress={() => setExpandedCard(isExpanded ? null : item.id)}
+                // onPress={() => setExpandedCard(isExpanded ? null : item.id)}
                 activeOpacity={0.7}
               >
                 <View style={styles.compactCardLeft}>
                   <View style={styles.compactDriverAvatar}>
                     <Text style={styles.compactDriverInitials}>
-                      {item.driverName.split(' ').map(n => n[0]).join('')}
+                      {driverInitials}
                     </Text>
                   </View>
                   <View style={styles.compactDriverInfo}>
@@ -502,16 +630,16 @@ const RosterManagementTable = ({
                   >
                     <MoreVertical size={18} color="#64748B" />
                   </TouchableOpacity>
-                  {isExpanded ? (
+                  {/* {isExpanded ? (
                     <ChevronUp size={18} color="#D97706" />
                   ) : (
                     <ChevronRight size={18} color="#64748B" />
-                  )}
+                  )} */}
                 </View>
               </TouchableOpacity>
 
               <View style={styles.statusTimeRow}>
-                <View style={[styles.compactStatusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
+                <View style={[styles.compactStatusBadge, { backgroundColor: getStatusBackgroundColor(item.status) }]}>
                   <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
                   <Text style={[styles.compactStatusText, { color: getStatusColor(item.status) }]}>
                     {item.status}
@@ -519,7 +647,9 @@ const RosterManagementTable = ({
                 </View>
                 <View style={styles.compactTimeContainer}>
                   <Clock size={12} color="#64748B" />
-                  <Text style={styles.compactTimeText}>{item.shiftTime.split(' - ')[0]}</Text>
+                  <Text style={styles.compactTimeText}>
+                    {formatTime(startTime)} - {formatTime(endTime)}
+                  </Text>
                 </View>
               </View>
 
@@ -530,9 +660,17 @@ const RosterManagementTable = ({
                     
                     <View style={styles.expandedRow}>
                       <View style={styles.expandedItem}>
+                        <Calendar size={14} color="#64748B" />
+                        <Text style={styles.expandedLabel}>Date:</Text>
+                        <Text style={styles.expandedValue}>{item.rosterDate}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.expandedRow}>
+                      <View style={styles.expandedItem}>
                         <Clock size={14} color="#64748B" />
-                        <Text style={styles.expandedLabel}>Full Shift:</Text>
-                        <Text style={styles.expandedValue}>{item.shiftTime}</Text>
+                        <Text style={styles.expandedLabel}>Shift:</Text>
+                        <Text style={styles.expandedValue}>{formatTime(startTime)} - {formatTime(endTime)}</Text>
                       </View>
                     </View>
 
@@ -554,32 +692,22 @@ const RosterManagementTable = ({
 
                     <View style={styles.expandedRow}>
                       <View style={styles.expandedItem}>
-                        <Calendar size={14} color="#64748B" />
-                        <Text style={styles.expandedLabel}>Date:</Text>
-                        <Text style={styles.expandedValue}>{item.rosterDate}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.expandedRow}>
-                      <View style={styles.expandedItem}>
-                        <View style={[styles.expandedBadge, { backgroundColor: `${getRosterTypeColor(item.rosterType)}20` }]}>
+                        <View style={[styles.expandedBadge, { backgroundColor: getRosterTypeBackgroundColor(item.rosterType) }]}>
                           <Text style={[styles.expandedBadgeText, { color: getRosterTypeColor(item.rosterType) }]}>
                             {item.rosterType}
                           </Text>
                         </View>
                       </View>
-                      
-                      <View style={styles.expandedItem}>
-                        <View style={[styles.expandedOperationalStatus, { backgroundColor: `${getOperationalStatusColor(item.vehicleOperationalStatus)}20` }]}>
-                          {item.vehicleOperationalStatus === 'Operational' && <CheckCircle size={12} color="#10B981" />}
-                          {item.vehicleOperationalStatus === 'Maintenance' && <AlertCircle size={12} color="#D97706" />}
-                          {item.vehicleOperationalStatus === 'Out of Service' && <XCircle size={12} color="#EF4444" />}
-                          <Text style={[styles.expandedOperationalStatusText, { color: getOperationalStatusColor(item.vehicleOperationalStatus) }]}>
-                            {item.vehicleOperationalStatus}
-                          </Text>
+                    </View>
+
+                    {item.roster_id && (
+                      <View style={styles.expandedRow}>
+                        <View style={styles.expandedItem}>
+                          <Text style={styles.expandedLabel}>Roster ID:</Text>
+                          <Text style={styles.expandedValue}>{item.roster_id}</Text>
                         </View>
                       </View>
-                    </View>
+                    )}
                   </View>
 
                   <View style={styles.expandedActions}>
@@ -593,14 +721,6 @@ const RosterManagementTable = ({
                       <Edit size={16} color="#3B82F6" />
                       <Text style={styles.expandedActionText}>Manage</Text>
                     </TouchableOpacity>
-                    
-                    {/* <TouchableOpacity 
-                      style={[styles.expandedActionButton, styles.expandedViewButton]}
-                      onPress={() => onViewDetails(item)}
-                    >
-                      <ChevronRight size={16} color="#D97706" />
-                      <Text style={styles.expandedViewText}>View Details</Text>
-                    </TouchableOpacity> */}
                   </View>
                 </View>
               )}
@@ -636,10 +756,8 @@ const RosterManagementTable = ({
         </TouchableOpacity>
       </View>
 
-      {/* Conditional rendering - but hooks are already called unconditionally above */}
       {isMobile ? renderMobileView() : renderTableView()}
 
-      {/* Modals - Always rendered, never conditional */}
       <ActionModal
         visible={showActions}
         onClose={() => setShowActions(false)}
@@ -647,6 +765,7 @@ const RosterManagementTable = ({
         onReassignDriver={onReassignDriver}
         onReassignVehicle={onReassignVehicle}
         onEditRoster={onEditRoster}
+        // onCancelRoster={onCancelRoster}
       />
 
       <FilterModal
@@ -837,23 +956,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  operationalStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 6,
-  },
-  operationalStatusText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-//   actionButton: {
-//     padding: 8,
-//     borderRadius: 8,
-//     backgroundColor: '#F1F5F9',
-//   },
+  // actionButton: {
+  //   padding: 8,
+  //   borderRadius: 8,
+  //   backgroundColor: '#F1F5F9',
+  // },
   emptyState: {
     padding: 40,
     alignItems: 'center',
@@ -907,6 +1014,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     gap: 12,
   },
+  cancelActionButton: {
+    backgroundColor: '#FEF2F2',
+  },
   actionTextContainer: {
     flex: 1,
   },
@@ -921,16 +1031,33 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   cancelButton: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     marginTop: 8,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
+    color: '#64748B',
     textAlign: 'center',
     flex: 1,
+  },
+  cancelInputContainer: {
+    marginVertical: 12,
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+  },
+  cancelInput: {
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   // Filter Modal Styles
   filterModalOverlay: {
@@ -1000,8 +1127,7 @@ const styles = StyleSheet.create({
   },
   // Mobile Compact Card Styles
   mobileContainer: {
-    // maxHeight: 500,
-    // marginBottom:50,
+    maxHeight: 500,
   },
   cardWrapper: {
     marginBottom: 16,
@@ -1148,18 +1274,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  expandedOperationalStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    gap: 6,
-  },
-  expandedOperationalStatusText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
   expandedActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -1180,14 +1294,6 @@ const styles = StyleSheet.create({
   expandedActionText: {
     fontSize: 14,
     color: '#3B82F6',
-    fontWeight: '600',
-  },
-  expandedViewButton: {
-    backgroundColor: '#FFFBEB',
-  },
-  expandedViewText: {
-    fontSize: 14,
-    color: '#D97706',
     fontWeight: '600',
   },
 });

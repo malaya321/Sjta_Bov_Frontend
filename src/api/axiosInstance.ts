@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 // Your specific base URL
 const BASE_URL = 'http://192.168.10.189/SJTABOV/public/api/';
+// const BASE_URL = 'http://192.168.10.245/sjtabov/public/api/';
 
 const api = axios.create({
   baseURL: BASE_URL,
