@@ -371,11 +371,14 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       await AsyncStorage.setItem(CHECKIN_TIME, checkinResult?.data?.check_in);
       
       // Show success and close after delay
-      setTimeout(() => {
-        Alert.alert('Success', checkinResult.message || 'Check-in completed!', [
-          { text: 'Done', onPress: onCheckinSuccess }
-        ]);
-      }, 500);
+      if(checkinResult.success==true){
+        onClose();
+      }
+      // setTimeout(() => {
+      //   Alert.alert('Success', checkinResult.message || 'Check-in completed!', [
+      //     { text: 'Done', onPress: onCheckinSuccess }
+      //   ]);
+      // }, 500);
       
     } catch (err: any) {
       // Check if it's a verification error from the backend

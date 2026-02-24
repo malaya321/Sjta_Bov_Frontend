@@ -83,7 +83,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     };
 
     loadCheckinStatus();
-  }, [showCheckoutModal]);
+  }, [showCheckoutModal,showCheckinModal]);
   
   const logoutMutation = useLogout();
   const { 
@@ -136,7 +136,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
       setCheckinTime(checkinData.data.check_in);
     }
     
-    Alert.alert('Success', 'You have successfully checked in!');
+    // Alert.alert('Success', 'You have successfully checked in!');
   };
 
   // Check-out Handlers
