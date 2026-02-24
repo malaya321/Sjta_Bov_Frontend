@@ -89,7 +89,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
   const [batteryPhoto, setBatteryPhoto] = useState<ImageFile | null>(null);
-
+// console.log(checkinTime,'checkinTime=====')
   // Request location permission
   const requestLocationPermission = async (): Promise<boolean> => {
     try {
@@ -279,6 +279,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   const handleVerifyAndSubmit = async () => {
+    // console.log('clicked','manoj')
+    // return
     if (!capturedImageFile) {
       Alert.alert('Missing Photo', 'Please capture your face photo first.');
       setCurrentStep(1);
@@ -367,19 +369,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       // Single API call for checkout
       const checkoutResult = await checkout(checkoutFormData);
-      console.log('Checkout result:', checkoutResult);
-      
+      // console.log('Checkout result:2', checkoutResult);
+      // checkoutResult
+      // onCheckoutSuccess()
+      if(checkoutResult.status===1){
+        onClose()
+      }
+  
       setVerificationResult({
         success: true,
         message: 'Check-out completed successfully!'
       });
       
       // Show success and close after delay
-      setTimeout(() => {
-        Alert.alert('Success', checkoutResult.message || 'Check-out completed!', [
-          { text: 'Done', onPress: () => onCheckoutSuccess(checkoutResult) }
-        ]);
-      }, 500);
+      // setTimeout(() => {
+      //   Alert.alert('Success', checkoutResult.message || 'Check-out completed!', [
+      //     { text: 'Done', onPress: () => onCheckoutSuccess(checkoutResult) }
+      //   ]);
+      // }, 500);
       
     } catch (err: any) {
       console.error('Checkout error:', err);
@@ -397,8 +404,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         success: false,
         message: errorMessage
       });
-      
-      Alert.alert('Check-out Failed', errorMessage);
+      // onClose()
+      // Alert.alert('Check-out Failed', errorMessage);
     } finally {
       setIsVerifying(false);
     }

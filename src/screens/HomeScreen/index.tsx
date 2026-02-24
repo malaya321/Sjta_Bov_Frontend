@@ -66,6 +66,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     const loadCheckinStatus = async () => {
       try {
         const storedCheckinTime = await AsyncStorage.getItem('checkinTime');
+        // console.log(storedCheckinTime,'storedCheckinTime====')
         console.log('Loaded checkinTime from storage:', storedCheckinTime);
         if (storedCheckinTime) {
           setIsCheckedIn(true);
@@ -82,7 +83,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     };
 
     loadCheckinStatus();
-  }, []);
+  }, [showCheckoutModal]);
   
   const logoutMutation = useLogout();
   const { 

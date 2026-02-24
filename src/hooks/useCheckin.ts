@@ -83,7 +83,7 @@ export const useCheckin = (): UseCheckinReturn => {
       // Call the service with FormData
       const result = await checkinService.checkout(formData);
 
-      if (!result.success) {
+      if (!result.status) {
         throw new Error(result.message || 'Check-out failed');
       }
 

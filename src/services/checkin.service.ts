@@ -53,36 +53,50 @@ class CheckinService {
   /**
    * ✅ Checkout with complete FormData
    */
-  async checkout(formData: FormData): Promise<CheckinResponse> {
-    try {
-      console.log('📤 Sending checkout request with FormData');
-      
-      // Log FormData contents for debugging
+async checkout(formData: FormData): Promise<any> {
+  try {
+    console.log('📤 Sending checkout request with FormData');
+    
+    // Log FormData contents for debugging
+    // @ts-ignore
+    if (formData._parts) {
       // @ts-ignore
-      if (formData._parts) {
-        // @ts-ignore
-        formData._parts.forEach((part: any) => {
-          console.log(`FormData field: ${part[0]}`, part[1]?.uri ? '[Image File]' : part[1]);
-        });
-      }
-      // Make the API call with FormData
-      const response = await api.post('/check-out', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      formData._parts.forEach((part: any) => {
+        console.log(`FormData field: ${part[0]}`, part[1]?.uri ? '[Image File]' : part[1]);
       });
-      console.log('✅ Checkout successful:', response.data);
-      // Remove check-in time from storage on successful checkout
-      if (response.data?.status === 1) {
-        await AsyncStorage.removeItem('checkinTime');
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Check-out error:', error);
-      throw error;
     }
+    
+    // Make the API call with FormData
+    const response = await api.post('/check-out', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('✅ Checkout response received:', response.data);
+    
+    // Check if the API returned a success status
+    if (response.data?.status === 1) {
+      // Success case
+       try {
+        await AsyncStorage.removeItem('checkinTime');
+        console.log('✅ Check-in time removed');
+      } catch (storageError) {
+        // Log but don't throw - this shouldn't affect the checkout success
+        console.warn('⚠️ Failed to remove checkinTime from storage:', storageError);
+      }
+      return response.data;
+    } else {
+     
+      // Business logic error - throw custom error
+      throw new Error(response.data?.message || 'Checkout failed');
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Check-out error:', error);
+    throw error;
   }
+}
 
   /**
    * ✅ Get check-in history
