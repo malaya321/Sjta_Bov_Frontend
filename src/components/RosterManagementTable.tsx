@@ -328,7 +328,7 @@ const FilterModal = ({
       <View style={styles.filterModalOverlay}>
         <View style={styles.filterModalContent}>
           <View style={styles.filterModalHeader}>
-            <Text style={styles.filterModalTitle}>Filter Rosters</Text>
+            <Text style={styles.filterModalTitle}>Filter Shift</Text>
             <TouchableOpacity onPress={onClose}>
               <XCircle size={24} color="#64748B" />
             </TouchableOpacity>
@@ -440,7 +440,7 @@ const RosterManagementTable = ({
     
     return matchesSearch && matchesStatus && matchesZone;
   });
-
+// console.log(filteredData,'filteredData=======')
   // Render table view for web/tablet
   const renderTableView = () => (
     <View>
@@ -594,7 +594,8 @@ const RosterManagementTable = ({
           const [startTime, endTime] = item.shiftTime.split(' - ');
           
           return (
-            <View key={item.id} style={styles.cardWrapper}>
+            <>
+            {(item?.status=="Active") && <View key={item.id} style={styles.cardWrapper}>
               <TouchableOpacity
                 style={styles.compactCard}
                 // onPress={() => setExpandedCard(isExpanded ? null : item.id)}
@@ -724,7 +725,9 @@ const RosterManagementTable = ({
                   </View>
                 </View>
               )}
-            </View>
+            </View>}
+            </>
+           
           );
         })
       )}
@@ -1127,7 +1130,7 @@ const styles = StyleSheet.create({
   },
   // Mobile Compact Card Styles
   mobileContainer: {
-    maxHeight: 500,
+    // maxHeight: 500,
   },
   cardWrapper: {
     marginBottom: 16,

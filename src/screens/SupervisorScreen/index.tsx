@@ -44,16 +44,8 @@ import {
   useSupervisorDashboard,
   useReassignDriver,
   useReassignVehicle,
-  useCreateAssignment,
-  useUnassignVehicle,
-  useMarkNotificationRead,
-  useMarkAllNotificationsRead,
   useDrivers,
-  useVehicles,
-  useActiveRosters,
   useNotifications,
-  useCancelRoster,
-  useUpdateRoster
 } from '../../hooks/useSupervisor';
 
 // Define navigation types for the ROOT stack
@@ -185,7 +177,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
 
   // React Query Hooks - Always called, never conditionally
   const {
-    stats,
+    // stats,
     activeDrivers,
     availableVehicles,
     activeAssignments,
@@ -199,8 +191,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   const { data: notificationsData } = useNotifications({ unreadOnly: true });
   const notifications = notificationsData?.data || [];
   
-  const { data: activeRostersData } = useActiveRosters();
-  const activeRosterList = activeRostersData || [];
+  const activeRosterList:any =  [];
 
   // Search queries state
   const [driverSearchQuery, setDriverSearchQuery] = useState('');
@@ -226,17 +217,9 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     limit: 20,
     enabled: true
   });
-// console.log(filteredVehiclesData,'mapApiDriversToDrivers+')
-// console.log(filteredDriversData,'mapApiDriversToDrivers+')
   // Mutation Hooks
   const reassignDriverMutation = useReassignDriver();
   const reassignVehicleMutation = useReassignVehicle();
-  const createAssignmentMutation = useCreateAssignment();
-  const unassignVehicleMutation = useUnassignVehicle();
-  const markNotificationRead = useMarkNotificationRead();
-  const markAllNotificationsRead = useMarkAllNotificationsRead();
-  const cancelRosterMutation = useCancelRoster();
-  const updateRosterMutation = useUpdateRoster();
 
   // Local State
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -259,7 +242,6 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   const [selectedVehicleForAssignment, setSelectedVehicleForAssignment] = useState<Vehicle | null>(null);
   const [justificationText, setJustificationText] = useState('');
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
-// console.log(selectedVehicleForAssignment,'selectedVehicleForAssignment+++++')
   // Map API drivers to your Driver interface
   const mapApiDriversToDrivers = (apiDrivers: any[]): Driver[] => {
     if (!apiDrivers || !Array.isArray(apiDrivers)) return [];
@@ -279,7 +261,6 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       mobile: driver.mobile
     }));
   };
-// console.log(mapApiDriversToDrivers,'mapApiDriversToDrivers+')
   // Map API vehicles to your Vehicle interface
   const mapApiVehiclesToVehicles = (apiVehicles: any[]): Vehicle[] => {
     if (!apiVehicles || !Array.isArray(apiVehicles)) return [];
@@ -354,7 +335,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
 
   // Merge with filtered data when available
   const driversList = useMemo(() => {
-    if (filteredDriversData?.data && filteredDriversData.data.length > 0) {
+    if (filteredDriversData?.data && filteredDriversData?.data?.length > 0) {
       const mappedFiltered = mapApiDriversToDrivers(filteredDriversData.data);
       const existingIds = new Set(baseDriversList.map(d => d.id));
       const newDrivers = mappedFiltered.filter(d => !existingIds.has(d.id));
@@ -446,7 +427,6 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       return [];
     }
   }, [todayRosters?.data?.rosters]);
-
   // Transform assignments using useMemo
   const assignments = useMemo(() => {
     return activeAssignments && Array.isArray(activeAssignments) ? activeAssignments : [];
@@ -499,7 +479,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       driver.id.toLowerCase().includes(driverSearchQuery.toLowerCase())
     );
   }, [driversList, driverSearchQuery]);
-
+// console.log(driversList,'filteredDrivers+++++++')
   const filteredVehicles = useMemo(() => {
     return vehiclesList.filter(vehicle => 
       vehicle.id.toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
@@ -509,12 +489,12 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   }, [vehiclesList, vehicleSearchQuery]);
 
   // Stats for display
-  const dashboardStats = {
-    activeDrivers: stats?.activeDrivers || (activeDrivers?.length || 0),
-    availableBovs: stats?.availableBovs || (availableVehicles?.length || 0),
-    activeAssignments: stats?.activeAssignments || (activeAssignments?.length || 0),
-    pendingRequests: stats?.pendingRequests || unreadNotifications || 0
-  };
+  // const dashboardStats = {
+  //   activeDrivers: stats?.activeDrivers || (activeDrivers?.length || 0),
+  //   availableBovs: stats?.availableBovs || (availableVehicles?.length || 0),
+  //   activeAssignments: stats?.activeAssignments || (activeAssignments?.length || 0),
+  //   pendingRequests: stats?.pendingRequests || unreadNotifications || 0
+  // };
 
   // Active assignments list
   const activeAssignmentsList = useMemo(() => {
@@ -568,7 +548,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
 
   // Roster management handlers
   const handleReassignDriver = (rosterId: string, currentDriver: string) => {
-    const roster = rosterData.find(r => r.id === rosterId);
+    const roster = rosterData.find((r:any) => r.id === rosterId);
     const driver = driversList.find(d => d.name === currentDriver);
     setCurrentRosterId(rosterId);
     setCurrentDriverName(currentDriver);
@@ -580,7 +560,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   };
 
   const handleReassignVehicle = (rosterId: string, currentVehicle: string) => {
-    const roster = rosterData.find(r => r.id === rosterId);
+    const roster = rosterData.find((r:any) => r.id === rosterId);
     const vehicle = vehiclesList.find(v => v.id === currentVehicle);
     setCurrentRosterId(rosterId);
     setCurrentVehicleName(currentVehicle);
@@ -733,21 +713,21 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   };
 
   const completeAssignment = () => {
-    createAssignmentMutation.mutate({
-      driverId: selectedDriver!.id,
-      vehicleId: selectedBov,
-      route: 'To be assigned',
-      notes: message
-    }, {
-      onSuccess: () => {
-        if (isMounted.current) {
-          setMessage('');
-          setSelectedDriver(null);
-          setSelectedBov('');
-          refresh();
-        }
-      }
-    });
+    // createAssignmentMutation.mutate({
+    //   driverId: selectedDriver!.id,
+    //   vehicleId: selectedBov,
+    //   route: 'To be assigned',
+    //   notes: message
+    // }, {
+    //   onSuccess: () => {
+    //     if (isMounted.current) {
+    //       setMessage('');
+    //       setSelectedDriver(null);
+    //       setSelectedBov('');
+    //       refresh();
+    //     }
+    //   }
+    // });
   };
 
   const handleQuickAssign = () => {
@@ -785,29 +765,29 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     const assignment = assignments.find(a => a.id === assignmentId);
     if (!assignment) return;
 
-    Alert.alert(
-      'Unassign Vehicle',
-      `Remove ${assignment.bov} from ${assignment.driverName}?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes',
-          style: 'destructive',
-          onPress: () => {
-            unassignVehicleMutation.mutate({
-              assignmentId,
-              reason: 'Supervisor request'
-            }, {
-              onSuccess: () => {
-                if (isMounted.current) {
-                  refresh();
-                }
-              }
-            });
-          }
-        }
-      ]
-    );
+    // Alert.alert(
+    //   'Unassign Vehicle',
+    //   `Remove ${assignment.bov} from ${assignment.driverName}?`,
+    //   [
+    //     { text: 'No', style: 'cancel' },
+    //     {
+    //       text: 'Yes',
+    //       style: 'destructive',
+    //       onPress: () => {
+    //         unassignVehicleMutation.mutate({
+    //           assignmentId,
+    //           reason: 'Supervisor request'
+    //         }, {
+    //           onSuccess: () => {
+    //             if (isMounted.current) {
+    //               refresh();
+    //             }
+    //           }
+    //         });
+    //       }
+    //     }
+    //   ]
+    // );
   };
 
   // Notification handlers
@@ -815,12 +795,12 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     setSelectedNotification(notification);
     setShowNotificationModal(true);
     if (!notification.read) {
-      markNotificationRead.mutate(notification.id);
+      // markNotificationRead.mutate(notification.id);
     }
   };
 
   const handleMarkAllRead = () => {
-    markAllNotificationsRead.mutate();
+    // markAllNotificationsRead.mutate();
   };
 
   const handleNotificationAction = () => {
@@ -852,7 +832,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.headerSubtitle}>SUPERVISOR</Text>
-            <Text style={styles.headerTitle}>Roster Management</Text>
+            <Text style={styles.headerTitle}>Shift Management</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity 
@@ -883,11 +863,11 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
                 </TouchableOpacity>
               )}
             </View>
-            <ScrollView style={styles.notificationsList} maxHeight={300}>
+            <ScrollView style={styles.notificationsList}>
               {notifications.length === 0 ? (
                 <Text style={styles.noNotificationsText}>No notifications</Text>
               ) : (
-                notifications.map((notification) => (
+                notifications.map((notification:any) => (
                   <TouchableOpacity
                     key={notification.id}
                     style={[
@@ -960,7 +940,8 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
             <View style={[styles.statIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
               <ClipboardCheck size={20} color="#3B82F6" />
             </View>
-            <Text style={styles.statValue}>{dashboardStats.activeAssignments}</Text>
+            <Text style={styles.statValue}>0</Text>
+            {/* <Text style={styles.statValue}>{dashboardStats.activeAssignments}</Text> */}
             <Text style={styles.statLabel}>Active Trips</Text>
           </TouchableOpacity>
         </View>
@@ -997,7 +978,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
               </View>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {activeRosterList.map((roster) => (
+              {activeRosterList.map((roster:any) => (
                 <TouchableOpacity
                   key={roster.id}
                   style={styles.activeRosterCard}
@@ -1024,9 +1005,9 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
         {/* Roster Management Table */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Roster Management</Text>
+            <Text style={styles.sectionTitle}>Shift Management</Text>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{rosterData.length} Rosters</Text>
+              <Text style={styles.badgeText}>{rosterData.filter((item:any) => item.status === 'Active').length} Shift</Text>
             </View>
           </View>
           

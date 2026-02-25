@@ -29,6 +29,7 @@ import AttendanceSection from './components/AttendanceSection';
 import VehicleSection from './components/VehicleSection';
 import CheckinModal from './components/CheckinModal';
 import CheckoutModal from './components/CheckoutModal';
+import { useDriver } from '../../hooks/useDriver';
 
 const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -61,7 +62,21 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [checkoutBatteryText, setCheckoutBatteryText] = useState('');
   const [checkoutCapturedImageFile, setCheckoutCapturedImageFile] = useState<ImageFile | null>(null);
   const [password, setPassword] = useState(''); // For password input during checkout
-
+  const [driverHomeScreenData, setDriverHomeScreenData] = useState<any>({});
+  const { 
+    data:driverHomeScreenAPIData, 
+    isLoading, 
+    error, 
+    refetch,
+    isRefetching 
+  } = useDriver();
+    useEffect(() => {
+    // if (driverHomeScreenData) {
+    setDriverHomeScreenData(driverHomeScreenAPIData)
+      
+    // }
+  }, [driverHomeScreenAPIData]);
+  console.log('Driver driverHomeScreenData loaded:', driverHomeScreenData);
   useEffect(() => {
     const loadCheckinStatus = async () => {
       try {
@@ -205,7 +220,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         <HeaderSection
           isIOS={isIOS}
           isSmallDevice={isSmallDevice}
-          driverData={driverData}
+          driverData={driverHomeScreenData}
           isCheckedIn={isCheckedIn}
           isLoggingOut={isLoggingOut}
           hasNotifications={hasNotifications}
@@ -224,6 +239,8 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             isCheckedIn={isCheckedIn}
             isLoggingOut={isLoggingOut}
             totalLoading={totalLoading}
+            checkinTime=''
+            checkoutTime=''
             onCheckinPress={handleCheckinFlow}
             onCheckoutPress={handleCheckoutFlow}
           />
@@ -231,7 +248,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           <VehicleSection
             isIOS={isIOS}
             isSmallDevice={isSmallDevice}
-            driverData={driverData}
+            driverData={driverHomeScreenData}
             isCheckedIn={isCheckedIn}
             isLoggingOut={isLoggingOut}
             totalLoading={totalLoading}
@@ -279,12 +296,12 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
           <View style={[styles.infoCard, isIOS && styles.iosShadow]}>
             <View style={styles.infoRow}>
               <Shield size={isSmallDevice ? 16 : 18} color="#D97706" />
-              <Text style={styles.infoText}>Vehicle insured until Dec 2024</Text>
+              <Text style={styles.infoText}>Vehicle insured until {driverHomeScreenData?.vehicle_details?.insurance_expiry_date}</Text>
             </View>
-            <View style={styles.infoRow}>
+            {driverHomeScreenData?.vehicle_details?.last_maintenance_closure&&<View style={styles.infoRow}>
               <CheckCircle size={isSmallDevice ? 16 : 18} color="#22C55E" />
-              <Text style={styles.infoText}>Last service: 15 Nov 2024</Text>
-            </View>
+              <Text style={styles.infoText}>Last service: {driverHomeScreenData?.vehicle_details?.last_maintenance_closure}</Text>
+            </View>}
             <View style={styles.infoRow}>
               <Wifi size={isSmallDevice ? 16 : 18} color="#3B82F6" />
               <Text style={styles.infoText}>GPS: Active • Last sync: 2 min ago</Text>
@@ -311,6 +328,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         totalLoading={totalLoading}
         error={checkinError}
         onImageCaptured={handleCheckinImageCaptured}
+         onBatteryImageCaptured={() => {}}
         onBatteryTextChange={setCheckinBatteryText}
         onBatteryLevelChange={setCheckinBatteryLevel}
         onCheckinSuccess={handleCheckinSuccess}
@@ -331,7 +349,8 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         capturedImageFile={checkoutCapturedImageFile}
         batteryText={checkoutBatteryText}
         batteryLevel={checkoutBatteryLevel}
-        password={password}
+         onBatteryImageCaptured={() => {}}
+        // password={password}
         checkinTime={checkinTime}
         isIOS={isIOS}
         isSmallDevice={isSmallDevice}
@@ -340,7 +359,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         onImageCaptured={handleCheckoutImageCaptured}
         onBatteryTextChange={setCheckoutBatteryText}
         onBatteryLevelChange={setCheckoutBatteryLevel}
-        onPasswordChange={handlePasswordChange}
+        // onPasswordChange={handlePasswordChange}
         onCheckoutSuccess={handleCheckoutSuccess}
         checkout={checkout}
       />

@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import {
   Battery,
+  BatteryLow,
+  BatteryMedium,
+  BatteryFull,
   BatteryCharging,
   AlertTriangle,
   CheckCircle2,
@@ -19,9 +22,7 @@ import {
 type VehicleSectionProps = {
   isIOS: boolean;
   isSmallDevice: boolean;
-  driverData: {
-    assignedVehicle: string;
-  };
+  driverData: any;
   isCheckedIn: boolean;
   isLoggingOut: boolean;
   totalLoading: boolean;
@@ -82,18 +83,35 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
         <View style={styles.vehicleHeader}>
           <View>
             <Text style={styles.vehicleLabel}>Current BOV</Text>
-            <Text style={styles.vehicleNumber}>{driverData.assignedVehicle}</Text>
+            <Text style={styles.vehicleNumber}>{driverData?.vehicle_details?.vehicle_number}</Text>
           </View>
           <View style={styles.vehicleStats}>
             <View style={styles.batteryContainer}>
-              <Battery size={isSmallDevice ? 16 : 18} color={batteryLevel < 20 ? '#DC2626' : batteryLevel < 50 ? '#F59E0B' : '#22C55E'} />
-              <Text style={[
-                styles.batteryText,
-                batteryLevel < 20 && styles.lowBatteryText,
-                batteryLevel < 50 && batteryLevel >= 20 && styles.mediumBatteryText
-              ]}>
-                {batteryLevel}%
-              </Text>
+              {/* <Battery size={isSmallDevice ? 16 : 18} color={driverData?.vehicle_details?.vehicle_battery < 20 ? '#DC2626' : driverData?.vehicle_details?.vehicle_battery < 50 ? '#F59E0B' : '#22C55E'} />
+              <BatteryLow size={isSmallDevice ? 16 : 18}/>
+              <BatteryMedium size={isSmallDevice ? 16 : 18}/>
+              <BatteryFull size={isSmallDevice ? 16 : 18}/> */}
+                {/* Battery Icons */}
+{driverData?.vehicle_details?.vehicle_battery < 20 ? (
+  <Battery size={isSmallDevice ? 16 : 18} color="#DC2626" /> // Red for critical
+) : driverData?.vehicle_details?.vehicle_battery < 50 ? (
+  <BatteryLow size={isSmallDevice ? 16 : 18} color="#F59E0B" /> // Orange for low
+) : driverData?.vehicle_details?.vehicle_battery < 80 ? (
+  <BatteryMedium size={isSmallDevice ? 16 : 18} color="#22C55E" /> // Green for good
+) : (
+  <BatteryFull size={isSmallDevice ? 16 : 18} color="#22C55E" /> // Green for full
+)}
+
+{/* Battery Text with matching colors */}
+<Text style={[
+  styles.batteryText,
+  driverData?.vehicle_details?.vehicle_battery < 20 && styles.criticalBatteryText,
+  driverData?.vehicle_details?.vehicle_battery >= 20 && 
+  driverData?.vehicle_details?.vehicle_battery < 50 && styles.lowBatteryText,
+  driverData?.vehicle_details?.vehicle_battery >= 50 && styles.goodBatteryText,
+]}>
+  {driverData?.vehicle_details?.vehicle_battery}%
+</Text>
             </View>
             <View style={[
               styles.statusBadge,
@@ -208,7 +226,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   vehicleNumber: {
-    fontSize: 32,
+    fontSize: 25,
     fontWeight: 'bold',
     color: '#1E293B',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
@@ -231,11 +249,20 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
   },
-  lowBatteryText: {
-    color: '#DC2626',
-  },
+  // lowBatteryText: {
+  //   color: '#DC2626',
+  // },
   mediumBatteryText: {
     color: '#F59E0B',
+  },
+  criticalBatteryText: {
+    color: '#DC2626', // Red
+  },
+  lowBatteryText: {
+    color: '#F59E0B', // Orange
+  },
+  goodBatteryText: {
+    color: '#22C55E', // Green
   },
   statusBadge: {
     paddingHorizontal: 10,

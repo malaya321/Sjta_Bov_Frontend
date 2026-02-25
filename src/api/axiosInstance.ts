@@ -108,9 +108,9 @@ api.interceptors.request.use(
           url: config.url,
           method: config.method,
           hasToken: !!config.headers.Authorization,
-          tokenPreview: config.headers.Authorization 
-            ? `${config.headers.Authorization.substring(0, 30)}...` 
-            : 'No token',
+           tokenPreview: typeof config.headers.Authorization === 'string' 
+      ? `${config.headers.Authorization.substring(0, 30)}...` 
+      : 'Token exists but not a string',
           data: config.data,
         });
       }
@@ -156,14 +156,14 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear token cache and storage
       cachedToken = null;
-      await AsyncStorage.removeItem('userToken');
+      // await AsyncStorage.removeItem('userToken');
       
       // You can add navigation to login screen here
       // Example: navigation.navigate('Login');
       
       return Promise.reject({
         status: 401,
-        message: 'Session expired. Please login again.',
+        message: error.response?.data?.message,
         requiresLogin: true,
         data: error.response?.data,
       });

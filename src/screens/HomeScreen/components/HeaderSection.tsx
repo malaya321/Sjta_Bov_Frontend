@@ -12,11 +12,7 @@ import { Bell, LogOut } from 'lucide-react-native';
 type HeaderSectionProps = {
   isIOS: boolean;
   isSmallDevice: boolean;
-  driverData: {
-    name: string;
-    id: string;
-    shift: string;
-  };
+  driverData: any;
   isCheckedIn: boolean;
   isLoggingOut: boolean;
   hasNotifications: boolean;
@@ -76,12 +72,12 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
       <View style={[styles.profileCard, isIOS && styles.iosShadow]}>
         <View style={styles.profileContent}>
           <View style={styles.profileInfo}>
-            <Text style={styles.shiftText}>{driverData.shift}</Text>
-            <Text style={styles.driverName}>{driverData.name}</Text>
+            <Text style={styles.shiftText}>{`${driverData?.shift_details?.shift_name} (${driverData?.shift_details?.start_time} - ${driverData?.shift_details?.end_time})`}</Text>
+            <Text style={styles.driverName}>{driverData?.driver_name}</Text>
             <View style={[styles.idBadge, isCheckedIn && styles.idBadgeActive]}>
               <View style={[styles.statusDot, isCheckedIn && styles.statusDotActive]} />
               <Text style={[styles.idText, isCheckedIn && styles.idTextActive]}>
-                ID: {driverData.id} • {isCheckedIn ? 'ONLINE' : 'OFFLINE'}
+                ID: {driverData?.driver_userid} • {isCheckedIn ? 'ONLINE' : 'OFFLINE'}
               </Text>
             </View>
           </View>
