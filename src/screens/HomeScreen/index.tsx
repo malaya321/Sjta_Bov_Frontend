@@ -68,7 +68,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     const [justifications, setJustification] = useState('');
   const [vehicleOperationalParams,setVehicleOperationalParams]= useState<any>({});
   const [isUpdateVehicleOperationalStatus,setIsUpdateVehicleOperationalStatus]= useState<any>(false);
-  console.log(selectedStatus,"selectedStatus++++++++++++")
+  // console.log(selectedStatus,"selectedStatus++++++++++++")
   const { 
     data:driverHomeScreenAPIData, 
     isLoading, 
@@ -99,13 +99,13 @@ const {
       
     // }
   }, [driverHomeScreenAPIData,vehicleStatusData]);
-  console.log('Driver vehicleStatusAPIData loaded:', driverHomeScreenData);
+  // console.log('Driver vehicleStatusAPIData loaded:', driverHomeScreenData);
   useEffect(() => {
     const loadCheckinStatus = async () => {
       try {
         const storedCheckinTime = await AsyncStorage.getItem('checkinTime');
         // console.log(storedCheckinTime,'storedCheckinTime====')
-        console.log('Loaded checkinTime from storage:', storedCheckinTime);
+        // console.log('Loaded checkinTime from storage:', storedCheckinTime);
         if (storedCheckinTime) {
           setIsCheckedIn(true);
           setCheckinTime(storedCheckinTime);
@@ -167,7 +167,7 @@ const {
   };
 
   const handleCheckinImageCaptured = (imageFile: ImageFile) => {
-    console.log('Image captured for check-in:', imageFile);
+    // console.log('Image captured for check-in:', imageFile);
     setCheckinCapturedImageFile(imageFile);
   };
 
@@ -189,7 +189,7 @@ const {
 
   // Check-out Handlers
   const handleCheckoutFlow = () => {
-    console.log('handleCheckoutFlow called - isCheckedIn:', isCheckedIn);
+    // console.log('handleCheckoutFlow called - isCheckedIn:', isCheckedIn);
     if (isCheckedIn) {
       console.log('Opening checkout modal');
       setShowCheckoutModal(true);
@@ -204,7 +204,7 @@ const {
   };
 
   const handleCheckoutImageCaptured = (imageFile: ImageFile) => {
-    console.log('Image captured for check-out:', imageFile);
+    // console.log('Image captured for check-out:', imageFile);
     setCheckoutCapturedImageFile(imageFile);
   };
 
