@@ -29,7 +29,7 @@ import AttendanceSection from './components/AttendanceSection';
 import VehicleSection from './components/VehicleSection';
 import CheckinModal from './components/CheckinModal';
 import CheckoutModal from './components/CheckoutModal';
-import { useDriver } from '../../hooks/useDriver';
+import { useDriver, useUpdateVehicleOperationalStatus, useVehicleStatus } from '../../hooks/useDriver';
 
 const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -63,6 +63,12 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [checkoutCapturedImageFile, setCheckoutCapturedImageFile] = useState<ImageFile | null>(null);
   const [password, setPassword] = useState(''); // For password input during checkout
   const [driverHomeScreenData, setDriverHomeScreenData] = useState<any>({});
+  const [vehicleStatusData, setVehicleStatusData] = useState<any>({});
+    const [selectedStatus, setSelectedStatus] = useState<any>(null);
+    const [justifications, setJustification] = useState('');
+  const [vehicleOperationalParams,setVehicleOperationalParams]= useState<any>({});
+  const [isUpdateVehicleOperationalStatus,setIsUpdateVehicleOperationalStatus]= useState<any>(false);
+  console.log(selectedStatus,"selectedStatus++++++++++++")
   const { 
     data:driverHomeScreenAPIData, 
     isLoading, 
@@ -70,13 +76,30 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     refetch,
     isRefetching 
   } = useDriver();
+
+    const { 
+    data:vehicleStatusAPIData, 
+    isLoading:isLoadingVehicleStatus, 
+    error:errorVehicleStatus, 
+    refetch:refetchVehicleStatus,
+    isRefetching:isRefetchingVehicleStatus 
+  } = useVehicleStatus();
+const updateVehicleStatus = useUpdateVehicleOperationalStatus();
+
+const {
+  data: updateVehicleStatusAPIData,
+  // isLoading: updateIsLoadingVehicleStatus,
+  error: updateErrorVehicleStatus,
+} = updateVehicleStatus;
+  
     useEffect(() => {
     // if (driverHomeScreenData) {
     setDriverHomeScreenData(driverHomeScreenAPIData)
+    setVehicleStatusData(vehicleStatusAPIData)
       
     // }
-  }, [driverHomeScreenAPIData]);
-  console.log('Driver driverHomeScreenData loaded:', driverHomeScreenData);
+  }, [driverHomeScreenAPIData,vehicleStatusData]);
+  console.log('Driver vehicleStatusAPIData loaded:', driverHomeScreenData);
   useEffect(() => {
     const loadCheckinStatus = async () => {
       try {
@@ -86,11 +109,11 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         if (storedCheckinTime) {
           setIsCheckedIn(true);
           setCheckinTime(storedCheckinTime);
-          setVehicleStatus('Running');
+          setVehicleStatus(driverHomeScreenData?.vehicle_details?.vehicle_status);
         } else {
           setIsCheckedIn(false);
           setCheckinTime(null);
-          setVehicleStatus('Idle');
+          setVehicleStatus('');
         }
       } catch (error) {
         console.error('Error loading check-in status:', error);
@@ -99,7 +122,15 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
 
     loadCheckinStatus();
   }, [showCheckoutModal,showCheckinModal]);
-  
+  useEffect(() => {
+  setVehicleOperationalParams({
+    vehicle_id: driverHomeScreenData?.vehicle_details?.vehicle_id,
+    roster_id: driverHomeScreenData?.roster_details?.roster_master_id,
+    shift_id: driverHomeScreenData?.shift_details?.shift_id,
+    status: selectedStatus?.id,
+    justification: justifications
+  })
+    }, [selectedStatus,justifications]);
   const logoutMutation = useLogout();
   const { 
     checkin, 
@@ -108,14 +139,16 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     error: checkinError, 
     resetError 
   } = useCheckin();
-
-  const driverData = {
-    name: "Rajesh Kumar",
-    id: "D-1024",
-    shift: "Shift A (08:30 AM - 04:30 PM)",
-    assignedVehicle: "BOV-402",
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rajesh'
-  };
+  useEffect(() => {
+  refetch();
+}, [updateVehicleStatusAPIData]);
+  // const driverData = {
+  //   name: "Rajesh Kumar",
+  //   id: "D-1024",
+  //   shift: "Shift A (08:30 AM - 04:30 PM)",
+  //   assignedVehicle: "BOV-402",
+  //   avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rajesh'
+  // };
 
   const confirmLogout = async() => {
     await logoutMutation.mutateAsync();
@@ -140,7 +173,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
 
   const handleCheckinSuccess = async (checkinData?: any) => {
     setIsCheckedIn(true);
-    setVehicleStatus('Running');
+    setVehicleStatus(driverHomeScreenData?.vehicle_details?.vehicle_status);
     setShowCheckinModal(false);
     setCheckinCapturedImageFile(null);
     setCheckinBatteryText('');
@@ -191,14 +224,24 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     setPassword(text);
   };
 
-  const handleStatusChange = (status: string) => {
+  const handleStatusChange = () => {
+    // console.log('called manoj',vehicleOperationalParams)
+    //  updateVehicleStatus.mutate(vehicleOperationalParams)
     if (isCheckedIn) {
-      setVehicleStatus(status);
-      Alert.alert(
-        'Status Updated',
-        `Vehicle status changed to ${status}`,
-        [{ text: 'OK' }]
-      );
+      // setVehicleStatus(status);
+      // setIsUpdateVehicleOperationalStatus(true)
+      if(justifications){
+           updateVehicleStatus.mutate(vehicleOperationalParams)
+            //  setJustification('');
+      // setSelectedStatus(null);
+      }
+      
+    
+      // Alert.alert(
+      //   'Status Updated',
+      //   `Vehicle status changed to ${status}`,
+      //   [{ text: 'OK' }]
+      // );
     }
   };
 
@@ -253,8 +296,13 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
             isLoggingOut={isLoggingOut}
             totalLoading={totalLoading}
             vehicleStatus={vehicleStatus}
+            allVehicleStatusData={vehicleStatusData}
             batteryLevel={isCheckedIn ? 82 : 0}
             onStatusChange={handleStatusChange}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+            justification={justifications}
+            setJustification={setJustification}
           />
 
           <View style={styles.section}>

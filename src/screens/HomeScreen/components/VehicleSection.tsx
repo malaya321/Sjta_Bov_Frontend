@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import {
   Battery,
@@ -17,6 +20,7 @@ import {
   Navigation as NavIcon,
   Car,
   Wifi,
+  X,
 } from 'lucide-react-native';
 
 type VehicleSectionProps = {
@@ -27,8 +31,13 @@ type VehicleSectionProps = {
   isLoggingOut: boolean;
   totalLoading: boolean;
   vehicleStatus: string;
+  allVehicleStatusData:any;
   batteryLevel: number;
-  onStatusChange: (status: string) => void;
+  onStatusChange: (status: string, justification?: string) => void;
+    selectedStatus:any;
+            setSelectedStatus:React.Dispatch<React.SetStateAction<any>>;
+            justification:any;
+            setJustification:React.Dispatch<React.SetStateAction<any>>;
 };
 
 const VehicleSection: React.FC<VehicleSectionProps> = ({
@@ -39,29 +48,68 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
   isLoggingOut,
   totalLoading,
   vehicleStatus,
+  allVehicleStatusData,
   batteryLevel,
   onStatusChange,
+    selectedStatus,
+    setSelectedStatus,
+    justification,
+    setJustification
 }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  // const [selectedStatus, setSelectedStatus] = useState<any>(null);
+  // const [justification, setJustification] = useState('');
+
   const statusColors: any = {
     'Running': { bg: '#DCFCE7', text: '#15803D', icon: '#22C55E' },
     'Charging': { bg: '#FEF3C7', text: '#D97706', icon: '#F59E0B' },
     'Cleaning': { bg: '#DBEAFE', text: '#1D4ED8', icon: '#3B82F6' },
-    'Fault': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
+    'Under Maintenance': { bg: '#FEE2E2', text: '#DC2626', icon: '#EF4444' },
     'Idle': { bg: '#F1F5F9', text: '#64748B', icon: '#94A3B8' }
+  };
+
+  const handleStatusPress = (status: any) => {
+    
+    if (status?.name === vehicleStatus) {
+      return; // Don't show modal if selecting same status
+    }
+    setSelectedStatus(status);
+    setJustification('');
+    setModalVisible(true);
+  };
+
+  const handleConfirmStatusChange = () => {
+    if (!justification.trim()) {
+      // console.log(selectedStatus,'status-----')
+      Alert.alert('Error', 'Please provide a justification for changing the status');
+      return;
+    }
+    
+    if (selectedStatus) {
+      onStatusChange(selectedStatus, justification.trim());
+      setModalVisible(false);
+      
+    }
+  };
+
+  const handleCancel = () => {
+    setModalVisible(false);
+    setJustification('');
+    setSelectedStatus(null);
   };
 
   const renderStatusIcon = (status: string, isActive: boolean) => {
     const iconColor = isActive ? statusColors[status]?.icon || '#D97706' : '#94A3B8';
     const iconSize = isSmallDevice ? 16 : 20;
-
-    switch (status) {
+{console.log(iconColor,'status++++++')}
+    switch (status?.trim()) {
       case 'Running':
         return <NavIcon size={iconSize} color={iconColor} />;
       case 'Charging':
         return <BatteryCharging size={iconSize} color={iconColor} />;
-      case 'Cleaning':
+      case 'Idle':
         return <CheckCircle2 size={iconSize} color={iconColor} />;
-      case 'Fault':
+      case 'Under Maintenance':
         return <AlertTriangle size={iconSize} color={iconColor} />;
       default:
         return <Car size={iconSize} color={iconColor} />;
@@ -69,92 +117,164 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
   };
 
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
-        {isCheckedIn && (
-          <View style={styles.connectionStatus}>
-            <Wifi size={isSmallDevice ? 10 : 12} color="#22C55E" />
-            <View style={styles.pulseDot} />
-          </View>
-        )}
-      </View>
-      <View style={[styles.vehicleCard, isIOS && styles.iosShadow]}>
-        <View style={styles.vehicleHeader}>
-          <View>
-            <Text style={styles.vehicleLabel}>Current BOV</Text>
-            <Text style={styles.vehicleNumber}>{driverData?.vehicle_details?.vehicle_number}</Text>
-          </View>
-          <View style={styles.vehicleStats}>
-            <View style={styles.batteryContainer}>
-              {/* <Battery size={isSmallDevice ? 16 : 18} color={driverData?.vehicle_details?.vehicle_battery < 20 ? '#DC2626' : driverData?.vehicle_details?.vehicle_battery < 50 ? '#F59E0B' : '#22C55E'} />
-              <BatteryLow size={isSmallDevice ? 16 : 18}/>
-              <BatteryMedium size={isSmallDevice ? 16 : 18}/>
-              <BatteryFull size={isSmallDevice ? 16 : 18}/> */}
+    <>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
+          {isCheckedIn && (
+            <View style={styles.connectionStatus}>
+              <Wifi size={isSmallDevice ? 10 : 12} color="#22C55E" />
+              <View style={styles.pulseDot} />
+            </View>
+          )}
+        </View>
+        <View style={[styles.vehicleCard, isIOS && styles.iosShadow]}>
+          <View style={styles.vehicleHeader}>
+            <View>
+              <Text style={styles.vehicleLabel}>Current BOV</Text>
+              <Text style={styles.vehicleNumber}>{driverData?.vehicle_details?.vehicle_number}</Text>
+            </View>
+            <View style={styles.vehicleStats}>
+              <View style={styles.batteryContainer}>
                 {/* Battery Icons */}
-{driverData?.vehicle_details?.vehicle_battery < 20 ? (
-  <Battery size={isSmallDevice ? 16 : 18} color="#DC2626" /> // Red for critical
-) : driverData?.vehicle_details?.vehicle_battery < 50 ? (
-  <BatteryLow size={isSmallDevice ? 16 : 18} color="#F59E0B" /> // Orange for low
-) : driverData?.vehicle_details?.vehicle_battery < 80 ? (
-  <BatteryMedium size={isSmallDevice ? 16 : 18} color="#22C55E" /> // Green for good
-) : (
-  <BatteryFull size={isSmallDevice ? 16 : 18} color="#22C55E" /> // Green for full
-)}
+                {driverData?.vehicle_details?.vehicle_battery < 20 ? (
+                  <Battery size={isSmallDevice ? 16 : 18} color="#DC2626" />
+                ) : driverData?.vehicle_details?.vehicle_battery < 50 ? (
+                  <BatteryLow size={isSmallDevice ? 16 : 18} color="#F59E0B" />
+                ) : driverData?.vehicle_details?.vehicle_battery < 80 ? (
+                  <BatteryMedium size={isSmallDevice ? 16 : 18} color="#22C55E" />
+                ) : (
+                  <BatteryFull size={isSmallDevice ? 16 : 18} color="#22C55E" />
+                )}
 
-{/* Battery Text with matching colors */}
-<Text style={[
-  styles.batteryText,
-  driverData?.vehicle_details?.vehicle_battery < 20 && styles.criticalBatteryText,
-  driverData?.vehicle_details?.vehicle_battery >= 20 && 
-  driverData?.vehicle_details?.vehicle_battery < 50 && styles.lowBatteryText,
-  driverData?.vehicle_details?.vehicle_battery >= 50 && styles.goodBatteryText,
-]}>
-  {driverData?.vehicle_details?.vehicle_battery}%
-</Text>
-            </View>
-            <View style={[
-              styles.statusBadge,
-              {
-                backgroundColor: statusColors[vehicleStatus].bg,
-              }
-            ]}>
-              <Text style={[
-                styles.statusText,
-                { color: statusColors[vehicleStatus].text }
+                {/* Battery Text with matching colors */}
+                <Text style={[
+                  styles.batteryText,
+                  driverData?.vehicle_details?.vehicle_battery < 20 && styles.criticalBatteryText,
+                  driverData?.vehicle_details?.vehicle_battery >= 20 && 
+                  driverData?.vehicle_details?.vehicle_battery < 50 && styles.lowBatteryText,
+                  driverData?.vehicle_details?.vehicle_battery >= 50 && styles.goodBatteryText,
+                ]}>
+                  {driverData?.vehicle_details?.vehicle_battery}%
+                </Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: statusColors[driverData?.vehicle_details?.vehicle_status]?.bg || '#F1F5F9',
+                }
               ]}>
-                {vehicleStatus}
+                <Text style={[
+                  styles.statusText,
+                  { color: statusColors[driverData?.vehicle_details?.vehicle_status]?.text || '#64748B' }
+                ]}>
+                  {driverData?.vehicle_details?.vehicle_status}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.statusGrid}>
+            {/* {console.log(vehicleStatus,allVehicleStatusData?.items,driverData?.vehicle_details?.vehicle_status,'vehicleStatus+++')} */}
+            {allVehicleStatusData?.items?.map((status: any, index: any) => {
+              if (index <= 3) {
+                return (
+                  <TouchableOpacity
+                    key={status?.id}
+                    disabled={!isCheckedIn || isLoggingOut || totalLoading}
+                    // disabled={ isLoggingOut || totalLoading}
+                    onPress={() => handleStatusPress(status)}
+                    style={[
+                      styles.statusButton,
+                      driverData?.vehicle_details?.vehicle_status === status?.name && styles.statusButtonActive,
+                      !isCheckedIn && styles.statusButtonDisabled,
+                      isIOS && styles.iosButton
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    {renderStatusIcon(status?.name?.trim(), driverData?.vehicle_details?.vehicle_status === status?.name?.trim())}
+                  
+                    <Text style={[
+                      styles.statusButtonText,
+                      driverData?.vehicle_details?.vehicle_status === status?.name?.trim() && styles.statusButtonTextActive
+                    ]}>
+                      {status?.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+              return null;
+            })}
+          </View>
+        </View>
+      </View>
+
+      {/* Justification Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, isIOS && styles.iosModalShadow]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Change Vehicle Status</Text>
+              <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
+                <X size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.statusChangeInfo}>
+                <Text style={styles.statusChangeLabel}>Changing from:</Text>
+                <View style={[styles.currentStatusBadge, { backgroundColor: statusColors[driverData?.vehicle_details?.vehicle_status]?.bg || '#F1F5F9' }]}>
+                  <Text style={[styles.currentStatusText, { color: statusColors[driverData?.vehicle_details?.vehicle_status]?.text || '#64748B' }]}>
+                    {driverData?.vehicle_details?.vehicle_status}
+                  </Text>
+                </View>
+                
+                <Text style={styles.statusChangeLabel}>To:</Text>
+                <View style={[styles.newStatusBadge, { backgroundColor: statusColors[selectedStatus?.name]?.bg || '#F1F5F9' }]}>
+                  <Text style={[styles.newStatusText, { color: statusColors[selectedStatus?.name]?.text || '#64748B' }]}>
+                    {selectedStatus?.name}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.justificationLabel}>
+                Justification <Text style={styles.requiredStar}>*</Text>
               </Text>
+              <TextInput
+                style={[styles.justificationInput, isIOS && styles.iosInput]}
+                placeholder="Please provide a reason for changing the status..."
+                placeholderTextColor="#94A3B8"
+                value={justification}
+                onChangeText={setJustification}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={handleCancel}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
+                  onPress={handleConfirmStatusChange}
+                >
+                  <Text style={styles.confirmButtonText}>Confirm Change</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
-
-        <View style={styles.statusGrid}>
-          {['Running', 'Charging', 'Cleaning', 'Fault'].map((status) => (
-            <TouchableOpacity
-              key={status}
-              disabled={!isCheckedIn || isLoggingOut || totalLoading}
-              onPress={() => onStatusChange(status)}
-              style={[
-                styles.statusButton,
-                vehicleStatus === status && styles.statusButtonActive,
-                !isCheckedIn && styles.statusButtonDisabled,
-                isIOS && styles.iosButton
-              ]}
-              activeOpacity={0.7}
-            >
-              {renderStatusIcon(status, vehicleStatus === status)}
-              <Text style={[
-                styles.statusButtonText,
-                vehicleStatus === status && styles.statusButtonTextActive
-              ]}>
-                {status}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </View>
+      </Modal>
+    </>
   );
 };
 
@@ -249,20 +369,14 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
   },
-  // lowBatteryText: {
-  //   color: '#DC2626',
-  // },
-  mediumBatteryText: {
-    color: '#F59E0B',
-  },
   criticalBatteryText: {
-    color: '#DC2626', // Red
+    color: '#DC2626',
   },
   lowBatteryText: {
-    color: '#F59E0B', // Orange
+    color: '#F59E0B',
   },
   goodBatteryText: {
-    color: '#22C55E', // Green
+    color: '#22C55E',
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -315,6 +429,152 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '90%',
+    maxWidth: 400,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  iosModalShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  statusChangeInfo: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    gap: 8,
+  },
+  statusChangeLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  currentStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 5,
+  },
+  currentStatusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  newStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 5,
+  },
+  newStatusText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  justificationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  requiredStar: {
+    color: '#DC2626',
+  },
+  justificationInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 14,
+    color: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    minHeight: 100,
+    textAlignVertical: 'top',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  iosInput: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F1F5F9',
+  },
+  cancelButtonText: {
+    color: '#64748B',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
+  confirmButton: {
+    backgroundColor: '#D97706',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });
 
