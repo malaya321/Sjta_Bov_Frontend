@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   View,
@@ -7,7 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Platform, // Added for OS-specific logic
+  Platform,
+  Modal,
 } from 'react-native';
 import { 
   Bell, 
@@ -17,44 +18,56 @@ import {
   Info,
   ChevronRight
 } from 'lucide-react-native';
+import { useNotification, useUpdateNotificationStatus,useUpdateAllNotificationStatus} from '../../hooks/useNotification';
 
 const AlertScreen = () => {
-  const notifications = [
-    {
-      id: '1',
-      type: 'SHIFT_ASSIGN',
-      title: 'New Shift Assigned',
-      desc: 'You have been assigned to Shift A (08:30 AM - 04:30 PM) for tomorrow.',
-      time: '10 mins ago',
-      unread: true,
-      icon: <CalendarClock size={20} color="#D97706" />,
-      bg: '#FFF7ED'
-    },
-    {
-      id: '2',
-      type: 'ROSTER_CHANGE',
-      title: 'Roster Updated',
-      desc: 'Supervisor Sharma updated your vehicle to BOV-405 for the current shift.',
-      time: '1 hour ago',
-      unread: true,
-      icon: <RotateCcw size={20} color="#1D4ED8" />,
-      bg: '#DBEAFE'
-    },
-    {
-      id: '3',
-      type: 'ATTENDANCE_REMINDER',
-      title: 'Check-out Reminder',
-      desc: 'Your shift ends in 15 minutes. Please remember to capture the battery photo.',
-      time: '2 hours ago',
-      unread: false,
-      icon: <AlertTriangle size={20} color="#DC2626" />,
-      bg: '#FEE2E2'
-    }
-  ];
+  const [notificationScreeenData,setNotificationScreenData]=useState<any>();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isRefetch, setIsRefetch] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  
+    const { 
+      data:notificationScreenAPIData, 
+      isLoading, 
+      error, 
+      refetch,
+      isRefetching 
+    } = useNotification();
+ const updateNotificationStatus = useUpdateNotificationStatus();
+ const updateAllNotificationStatus = useUpdateAllNotificationStatus();
+     useEffect(() => {
+        setNotificationScreenData(notificationScreenAPIData)
+      }, [notificationScreenAPIData]);
+         useEffect(() => {
+        refetch();
+      }, [isRefetch]);
 
+    const onNotificationTouch = (id: any) => {
+      const notification:any = notificationScreeenData?.data?.find((item: any) => item.id === id);
+      setSelectedNotification(notification);
+      setModalVisible(true);
+       updateNotificationStatus.mutate(id, {
+    onSuccess: () => {
+      setIsRefetch(!isRefetch);
+    }
+  });
+    };
+    
+    const closeModal = () => {
+      setModalVisible(false);
+      setSelectedNotification(null);
+    };
+
+    const onTouchAllNotificationRead = () => {
+  updateAllNotificationStatus.mutate(undefined, {
+    onSuccess: () => {
+      setIsRefetch(prev => !prev);
+    }
+  });
+};
+    
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* On Android, white status bar with dark icons looks best */}
       <StatusBar 
         barStyle="dark-content" 
         backgroundColor="white" 
@@ -62,13 +75,20 @@ const AlertScreen = () => {
       />
       
       <View style={styles.mainContainer}>
-        {/* Header with Android-specific Padding */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.headerTitle}>Notifications</Text>
             <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>2 New</Text>
+              <Text style={styles.unreadText}>{notificationScreeenData?.data?.filter((item:any) => item?.is_seen === 0).length} New</Text>
             </View>
+             <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => {onTouchAllNotificationRead()}}
+            >
+            <View style={styles.AllReadButton}>
+              <Text style={styles.unreadText}>Mark All As Read</Text>
+            </View>
+            </TouchableOpacity>
           </View>
           <Text style={styles.headerSubtitle}>Stay updated with your shift and vehicle status</Text>
         </View>
@@ -77,34 +97,35 @@ const AlertScreen = () => {
           showsVerticalScrollIndicator={false} 
           contentContainerStyle={styles.scrollContent}
         >
-          {notifications.map((item) => (
+          {notificationScreeenData?.data?.map((item:any) => (
             <TouchableOpacity 
               key={item.id} 
               style={[styles.alertCard, item.unread && styles.unreadCard]}
               activeOpacity={0.7}
+              onPress={() => {onNotificationTouch(item.id)}}
             >
-              <View style={[styles.iconContainer, { backgroundColor: item.bg }]}>
-                {item.icon}
+              <View style={[styles.iconContainer, { backgroundColor: (item.notification.type=='assigned')?'#FFF7ED':(item.notification.type=='updated')?'#DBEAFE':(item.notification.type=='reminder')?'#FEE2E2':'#FFF7ED' }]}>
+                {item.notification.type=='assigned'?<CalendarClock size={20} color="#D97706" />:item.notification.type=='updated'?<RotateCcw size={20} color="#1D4ED8" />:item.notification.type=='reminder'?<AlertTriangle size={20} color="#DC2626" />:<CalendarClock size={20} color="#D97706" />}
               </View>
               
               <View style={styles.contentContainer}>
                 <View style={styles.contentHeader}>
                   <Text style={[styles.alertTitle, item.unread && styles.boldText]}>
-                    {item.title}
+                    {item.notification.title}
                   </Text>
-                  {item.unread && <View style={styles.unreadDot} />}
+                  {!item.is_seen && <View style={styles.unreadDot} />}
                 </View>
                 <Text style={styles.alertDesc} numberOfLines={2}>
-                  {item.desc}
+                  {item?.notification?.message}
                 </Text>
-                <Text style={styles.alertTime}>{item.time}</Text>
+                <Text style={styles.alertTime}>{item.created_at}</Text>
               </View>
               
               <ChevronRight size={18} color="#CBD5E1" />
             </TouchableOpacity>
           ))}
 
-          {/* System Info Notice */}
+        
           <View style={styles.footerNotice}>
             <Info size={14} color="#94A3B8" />
             <Text style={styles.footerNoticeText}>
@@ -113,12 +134,88 @@ const AlertScreen = () => {
           </View>
         </ScrollView>
       </View>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notification Details</Text>
+              <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {selectedNotification && (
+              <View style={styles.modalBody}>
+                <View style={[styles.modalIconContainer, { backgroundColor: 
+                  selectedNotification.notification?.type == 'assigned' ? '#FFF7ED' : 
+                  selectedNotification.notification?.type == 'updated' ? '#DBEAFE' : 
+                  selectedNotification.notification?.type == 'reminder' ? '#FEE2E2' : '#FFF7ED' 
+                }]}>
+                  {selectedNotification.notification?.type == 'assigned' ? 
+                    <CalendarClock size={30} color="#D97706" /> : 
+                    selectedNotification.notification?.type == 'updated' ? 
+                    <RotateCcw size={30} color="#1D4ED8" /> : 
+                    selectedNotification.notification?.type == 'reminder' ? 
+                    <AlertTriangle size={30} color="#DC2626" /> : 
+                    <CalendarClock size={30} color="#D97706" />
+                  }
+                </View>
+                
+                <Text style={styles.modalNotificationTitle}>
+                  {selectedNotification.notification?.title}
+                </Text>
+                
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>Message:</Text>
+                  <Text style={styles.modalDetailValue}>
+                    {selectedNotification.notification?.message}
+                  </Text>
+                </View>
+                
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>Type:</Text>
+                  <View style={styles.modalTypeBadge}>
+                    <Text style={styles.modalTypeText}>
+                      {selectedNotification.notification?.type || 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>Received:</Text>
+                  <Text style={styles.modalDetailValue}>
+                    {selectedNotification.created_at}
+                  </Text>
+                </View>
+                
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>Status:</Text>
+                  <Text style={[styles.modalDetailValue, 
+                    !selectedNotification.is_seen && styles.unreadStatus
+                  ]}>
+                    {!selectedNotification.is_seen ? 'Unread' : 'Read'}
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.modalButton} onPress={closeModal}>
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // Fixes the Android overlap
   safeArea: { 
     flex: 1, 
     backgroundColor: '#FFF',
@@ -134,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', 
     borderBottomWidth: 1, 
     borderBottomColor: '#F1F5F9',
-    elevation: 2 // Adds shadow for Android
+    elevation: 2
   },
   headerTop: { 
     flexDirection: 'row', 
@@ -157,6 +254,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2, 
     borderRadius: 6 
   },
+    AllReadButton: { 
+    backgroundColor: '#d90606', 
+    paddingHorizontal: 8, 
+    paddingVertical: 2, 
+    borderRadius: 6 
+  },
   unreadText: { 
     color: '#FFF', 
     fontSize: 11, 
@@ -173,9 +276,8 @@ const styles = StyleSheet.create({
     padding: 16, 
     borderRadius: 20, 
     marginBottom: 12,
-    // Android Elevation
     elevation: 3,
-    // iOS Shadow
+
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -184,7 +286,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent'
   },
   unreadCard: {
-    borderColor: '#FFF7ED', // Subtle border for unread
+    borderColor: '#FFF7ED',
   },
   iconContainer: { 
     width: 48, 
@@ -241,7 +343,105 @@ const styles = StyleSheet.create({
     fontSize: 11, 
     color: '#94A3B8', 
     textAlign: 'center' 
-  }
+  },
+  // Added modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E293B',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  closeButtonText: {
+    fontSize: 18,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
+  modalBody: {
+    marginBottom: 24,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    alignSelf: 'center',
+  },
+  modalNotificationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalDetailItem: {
+    marginBottom: 12,
+  },
+  modalDetailLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  modalDetailValue: {
+    fontSize: 15,
+    color: '#1E293B',
+    lineHeight: 20,
+  },
+  modalTypeBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  modalTypeText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  unreadStatus: {
+    color: '#D97706',
+    fontWeight: 'bold',
+  },
+  modalButton: {
+    backgroundColor: '#D97706',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default AlertScreen;

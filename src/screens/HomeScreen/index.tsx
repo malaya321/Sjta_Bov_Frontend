@@ -30,6 +30,8 @@ import VehicleSection from './components/VehicleSection';
 import CheckinModal from './components/CheckinModal';
 import CheckoutModal from './components/CheckoutModal';
 import { useDriver, useUpdateVehicleOperationalStatus, useVehicleStatus } from '../../hooks/useDriver';
+import { useNavigation } from '@react-navigation/native';
+import { useUnreadNotificationCount } from '../../hooks/useNotification';
 
 const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -48,7 +50,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [vehicleStatus, setVehicleStatus] = useState('Idle');
-  const [hasNotifications, setHasNotifications] = useState(true);
+  const [hasNotifications, setHasNotifications] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [checkinTime, setCheckinTime] = useState<string | null>(null);
   
@@ -69,6 +71,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [vehicleOperationalParams,setVehicleOperationalParams]= useState<any>({});
   const [isUpdateVehicleOperationalStatus,setIsUpdateVehicleOperationalStatus]= useState<any>(false);
   // console.log(selectedStatus,"selectedStatus++++++++++++")
+  const navigation:any = useNavigation();
   const { 
     data:driverHomeScreenAPIData, 
     isLoading, 
@@ -84,6 +87,21 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     refetch:refetchVehicleStatus,
     isRefetching:isRefetchingVehicleStatus 
   } = useVehicleStatus();
+  //  const { 
+  //   data:driverHomeScreenAPIData, 
+  //   isLoading, 
+  //   error, 
+  //   refetch,
+  //   isRefetching 
+  // } = useDriver();
+
+    const { 
+    data:unreadNotificationsAPIData, 
+    isLoading:isLoadingunreadNotifications, 
+    error:errorunreadNotifications, 
+    refetch:refetchunreadNotifications,
+    isRefetching:isRefetchingunreadNotifications 
+  } = useUnreadNotificationCount();
 const updateVehicleStatus = useUpdateVehicleOperationalStatus();
 
 const {
@@ -91,7 +109,14 @@ const {
   // isLoading: updateIsLoadingVehicleStatus,
   error: updateErrorVehicleStatus,
 } = updateVehicleStatus;
-  
+
+    useEffect(() => {
+  if (unreadNotificationsAPIData) {
+    setHasNotifications(true);
+  } else {
+    setHasNotifications(false); // Reset when no data or data is empty
+  }
+  }, [unreadNotificationsAPIData]);
     useEffect(() => {
     // if (driverHomeScreenData) {
     setDriverHomeScreenData(driverHomeScreenAPIData)
@@ -167,7 +192,6 @@ const {
   };
 
   const handleCheckinImageCaptured = (imageFile: ImageFile) => {
-    // console.log('Image captured for check-in:', imageFile);
     setCheckinCapturedImageFile(imageFile);
   };
 
@@ -269,7 +293,8 @@ const {
           hasNotifications={hasNotifications}
           onNotificationPress={() => {
             setHasNotifications(false);
-            Alert.alert('Notifications', 'No new notifications');
+            navigation.navigate('Alerts');
+            // Alert.alert('Notifications', 'No new notifications');
           }}
           onProfilePress={() => Alert.alert('Profile', 'View profile details')}
           onLogoutPress={() => setShowAlert(true)}

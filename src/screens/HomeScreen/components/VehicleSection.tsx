@@ -101,7 +101,7 @@ const VehicleSection: React.FC<VehicleSectionProps> = ({
   const renderStatusIcon = (status: string, isActive: boolean) => {
     const iconColor = isActive ? statusColors[status]?.icon || '#D97706' : '#94A3B8';
     const iconSize = isSmallDevice ? 16 : 20;
-{console.log(iconColor,'status++++++')}
+// {console.log(iconColor,'status++++++')}
     switch (status?.trim()) {
       case 'Running':
         return <NavIcon size={iconSize} color={iconColor} />;
