@@ -105,7 +105,8 @@ const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () 
         name="Zone" 
         children={() => <ZoneScreen 
           // onActiveDriversPress={handleActiveDriversPress} 
-        />} 
+        />
+      } 
         options={{
           tabBarIcon: ({ color }) => <MapPin size={22} color={color} />,
         }}
@@ -117,6 +118,7 @@ const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () 
           tabBarLabel: () => null,
           tabBarButton: (props) => (
             <CentralButton {...props}>
+              
               <RotateCcw size={28} color="#FFFFFF" />
             </CentralButton>
           ),
@@ -154,6 +156,7 @@ const SupervisorTabNavigator = ({ onLogout }: { onLogout: () => void }) => {
         tabBarLabelStyle: navStyles.tabBarLabel,
       }}
     >
+      
       <Tab.Screen 
         name="Roster" 
         children={() => <SupervisorScreen onLogout={onLogout} />}
@@ -257,8 +260,11 @@ const AppNavigator = () => {
 
           <>
            <Stack.Screen name="SupervisorStack">
-            {() => <SupervisorTabNavigator onLogout={handleLogout} />}
+            {() => <SupervisorScreen onLogout={handleLogout} />}
           </Stack.Screen>
+           {/* <Stack.Screen name="SupervisorStack">
+            {() => <SupervisorTabNavigator onLogout={handleLogout} />}
+          </Stack.Screen> */}
            <Stack.Screen 
               name="ActiveDriver" 
               component={ActiveDriversScreen}

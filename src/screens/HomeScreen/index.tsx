@@ -330,7 +330,7 @@ const {
             setJustification={setJustification}
           />
 
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <TouchableOpacity disabled={isLoggingOut || totalLoading}>
@@ -364,7 +364,7 @@ const {
                 <Text style={styles.actionSubtitle}>Daily log</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
 
           <View style={[styles.infoCard, isIOS && styles.iosShadow]}>
             <View style={styles.infoRow}>
