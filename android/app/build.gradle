@@ -82,9 +82,10 @@ android {
         applicationId "com.bovdriverapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 5
+        versionName "1.0.3"
     }
+    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -92,18 +93,38 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Use hardcoded values since we know they work
+            storeFile file('my-release-key.keystore')
+            storePassword 'Suyog2023'
+            keyAlias 'my-key-alias'
+            keyPassword 'Suyog2023'
+        }
     }
+    
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Use release signing config
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            
+            // Add this to handle duplicate resources
+            crunchPngs false
         }
+    }
+    
+    // Add this to handle potential resource issues
+    packagingOptions {
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libjsc.so'
+        pickFirst '**/libfbjni.so'
+        pickFirst '**/libreanimated.so'
+        pickFirst '**/libreact_nativemodule_core.so'
+        pickFirst '**/libturbomodulejsijni.so'
     }
 }
 

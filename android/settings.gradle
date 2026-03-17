@@ -1,7 +1,17 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings")
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0' }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    // Avoid relying on `npx` being on PATH (common issue with Android Studio / non-interactive shells).
+    // You can override the Node binary via `NODE_BINARY=/path/to/node`.
+    def nodeBinary =
+            System.getenv("NODE_BINARY")
+                    ?: (file("/usr/local/bin/node").exists() ? "/usr/local/bin/node" : null)
+                    ?: (file("/opt/homebrew/bin/node").exists() ? "/opt/homebrew/bin/node" : null)
+                    ?: "node"
+    def cliJs = file("../node_modules/@react-native-community/cli/build/bin.js")
+    ex.autolinkLibrariesFromCommand([nodeBinary, cliJs.absolutePath, "config"])
+}
 rootProject.name = 'BOVDriverApp'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
