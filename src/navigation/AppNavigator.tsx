@@ -235,7 +235,7 @@ const AppNavigator = () => {
   if (isCheckingToken) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <StatusBar barStyle="light-content" backgroundColor="rgb(157, 20, 12)" translucent />
         <ActivityIndicator size="large" color="#D97706" />
       </View>
     );
@@ -243,7 +243,7 @@ const AppNavigator = () => {
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="light-content" backgroundColor="rgb(157, 20, 12)" translucent />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!auth.isLoggedIn ? (
           // Login Flow

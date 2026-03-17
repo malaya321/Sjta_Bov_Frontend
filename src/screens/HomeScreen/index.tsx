@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView,
@@ -72,6 +73,19 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [isUpdateVehicleOperationalStatus,setIsUpdateVehicleOperationalStatus]= useState<any>(false);
   // console.log(selectedStatus,"selectedStatus++++++++++++")
   const navigation:any = useNavigation();
+
+  useFocusEffect(
+    useCallback(() => {
+      StatusBar.setBarStyle('light-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('rgb(157, 20, 12)');
+        StatusBar.setTranslucent(false);
+      }
+      return () => {
+        // Optional: reset on blur if needed
+      };
+    }, [])
+  );
   const { 
     data:driverHomeScreenAPIData, 
     isLoading, 
@@ -275,8 +289,8 @@ const {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
-        barStyle={isIOS ? "dark-content" : "light-content"}
-        backgroundColor={isIOS ? "#5d0e0aff" : "#5d0e0aff"}
+        barStyle="light-content"
+        backgroundColor="rgb(157, 20, 12)"
       />
       <ScrollView
         style={styles.scrollView}
