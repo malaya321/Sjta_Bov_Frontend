@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import Navigation from './src/navigation';
 
 const App = () => {
@@ -27,6 +27,7 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
+      <StatusBar barStyle="light-content" backgroundColor="rgb(157, 20, 12)" translucent />
       <Navigation />
     </SafeAreaProvider>
   );

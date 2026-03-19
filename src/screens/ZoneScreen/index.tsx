@@ -37,11 +37,11 @@ const ZoneScreen = () => {
       {/* On Android, we set translucent to true so we can 
         control the padding manually for a cleaner look.
       */}
-      <StatusBar 
+      {/* <StatusBar 
         barStyle="dark-content" 
         backgroundColor="white"
         translucent={Platform.OS === 'android'} 
-      />
+      /> */}
       
       <View style={styles.mainContainer}>
         {/* Driver Header */}
@@ -126,7 +126,8 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: '#FFF',
     // THIS FIXES THE TOP MARGIN ON ANDROID
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
+    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
+       paddingTop: Platform.OS === 'android' ? 0 : 0 
   },
   mainContainer: { 
     flex: 1, 
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: { 
     padding: 20,
-    paddingBottom: 40 
+    paddingBottom: 70 
   },
   privacyBanner: { 
     flexDirection: 'row', 

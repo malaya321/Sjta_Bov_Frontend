@@ -179,11 +179,11 @@ const LoginScreen = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar
+      {/* <StatusBar
         barStyle="light-content"
         backgroundColor="#78350f"
         translucent={true}
-      />
+      /> */}
       <ImageBackground
         source={{
           uri: 'https://images.unsplash.com/photo-1621244249243-437b49c5aad9?q=80&w=2070&auto=format&fit=crop',
@@ -393,14 +393,14 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 120,
+    paddingTop: 30,
+    paddingBottom: 60,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Platform.OS === 'ios' ? 60 : 100,
+    marginBottom: Platform.OS === 'ios' ? 60 : 60,
   },
   logoContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logo: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     alignItems: 'center',
-    bottom: 0,
+    bottom: 10,
     left: 0,
     right: 0,
   },

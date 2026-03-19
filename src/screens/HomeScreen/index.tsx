@@ -288,10 +288,10 @@ const {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar
+      {/* <StatusBar
         barStyle="light-content"
         backgroundColor="rgb(157, 20, 12)"
-      />
+      /> */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

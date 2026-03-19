@@ -68,11 +68,11 @@ const AlertScreen = () => {
     
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar 
+      {/* <StatusBar 
         barStyle="dark-content" 
         backgroundColor="white" 
         translucent={true} 
-      />
+      /> */}
       
       <View style={styles.mainContainer}>
         <View style={styles.header}>
@@ -219,7 +219,8 @@ const styles = StyleSheet.create({
   safeArea: { 
     flex: 1, 
     backgroundColor: '#FFF',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
+    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 
+     paddingTop: Platform.OS === 'android' ? 0 : 0
   },
   mainContainer: { 
     flex: 1, 
