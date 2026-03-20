@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import Navigation from './src/navigation';
+import { RefreshProvider } from './src/context/RefreshContext';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,8 +28,10 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="rgb(157, 20, 12)" translucent />
-      <Navigation />
+      <RefreshProvider>
+        <StatusBar barStyle="light-content" backgroundColor="rgb(157, 20, 12)" translucent />
+        <Navigation />
+      </RefreshProvider>
     </SafeAreaProvider>
   );
 };

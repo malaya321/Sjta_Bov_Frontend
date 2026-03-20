@@ -19,12 +19,14 @@ import {
   ChevronRight
 } from 'lucide-react-native';
 import { useNotification, useUpdateNotificationStatus,useUpdateAllNotificationStatus} from '../../hooks/useNotification';
+import { useRefresh } from '../../context/RefreshContext';
 
 const AlertScreen = () => {
   const [notificationScreeenData,setNotificationScreenData]=useState<any>();
   const [modalVisible, setModalVisible] = useState(false);
   const [isRefetch, setIsRefetch] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const { tick: refreshTick } = useRefresh();
   
     const { 
       data:notificationScreenAPIData, 
@@ -41,6 +43,9 @@ const AlertScreen = () => {
          useEffect(() => {
         refetch();
       }, [isRefetch]);
+         useEffect(() => {
+        refetch();
+      }, [refreshTick]);
 
     const onNotificationTouch = (id: any) => {
       const notification:any = notificationScreeenData?.data?.find((item: any) => item.id === id);

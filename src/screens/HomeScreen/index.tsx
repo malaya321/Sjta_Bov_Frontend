@@ -33,6 +33,7 @@ import CheckoutModal from './components/CheckoutModal';
 import { useDriver, useUpdateVehicleOperationalStatus, useVehicleStatus } from '../../hooks/useDriver';
 import { useNavigation } from '@react-navigation/native';
 import { useUnreadNotificationCount } from '../../hooks/useNotification';
+import { useRefresh } from '../../context/RefreshContext';
 
 const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -116,6 +117,7 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     refetch:refetchunreadNotifications,
     isRefetching:isRefetchingunreadNotifications 
   } = useUnreadNotificationCount();
+  const { tick: refreshTick } = useRefresh();
 const updateVehicleStatus = useUpdateVehicleOperationalStatus();
 
 const {
@@ -181,6 +183,11 @@ const {
   useEffect(() => {
   refetch();
 }, [updateVehicleStatusAPIData]);
+  useEffect(() => {
+    refetch();
+    refetchVehicleStatus();
+    refetchunreadNotifications();
+  }, [refreshTick]);
   // const driverData = {
   //   name: "Rajesh Kumar",
   //   id: "D-1024",

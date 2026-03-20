@@ -58,14 +58,14 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             <Bell size={isSmallDevice ? 18 : 20} color="#94A3B8" />
             {hasNotifications && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.avatarContainer, isIOS && styles.iosShadow]}
             onPress={onProfilePress}
             activeOpacity={0.7}
             disabled={isLoggingOut}
           >
-            {/* Avatar Image */}
-          </TouchableOpacity>
+           
+          </TouchableOpacity> */}
         </View>
       </View>
 

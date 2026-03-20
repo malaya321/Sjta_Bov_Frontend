@@ -7,9 +7,9 @@ const queryClient = new QueryClient();
 const Navigation = () => {
   return (
     <QueryClientProvider client={queryClient}>
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
     </QueryClientProvider>
   );
 };

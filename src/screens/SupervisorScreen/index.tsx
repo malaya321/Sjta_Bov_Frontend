@@ -910,7 +910,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
         <View style={styles.statsContainer}>
           <TouchableOpacity 
             style={styles.statCard} 
-            onPress={handleActiveDriversPress}
+            // onPress={handleActiveDriversPress}
             activeOpacity={0.7}
           >
             <View style={[styles.statIcon, { backgroundColor: 'rgba(217, 119, 6, 0.1)' }]}>
@@ -922,7 +922,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
           
           <TouchableOpacity 
             style={styles.statCard} 
-            onPress={handleAvailableBovsPress}
+            // onPress={handleAvailableBovsPress}
             activeOpacity={0.7}
           >
             <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>

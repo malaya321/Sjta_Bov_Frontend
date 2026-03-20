@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 30,
+    paddingTop: 50,
     paddingBottom: 60,
   },
   header: {

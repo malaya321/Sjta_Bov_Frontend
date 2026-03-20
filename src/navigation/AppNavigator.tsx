@@ -30,6 +30,7 @@ import SupervisorScreen from '../screens/SupervisorScreen';
 import ActiveDriversScreen from '../screens/ActiveDriversScreen';
 import AvailableBovsScreen from '../screens/AvailableBovScreen';
 import CheckinScreen from '../screens/common';
+import { useRefresh } from '../context/RefreshContext';
 // Types
 export type RootStackParamList = {
   LoginScreen: undefined;
@@ -57,8 +58,9 @@ const Tab = createBottomTabNavigator<MainTabsParamList>();
 /**
  * Custom Central Button for the Floating Effect
  */
-const CentralButton = ({ children, onPress }: any) => (
+const CentralButton = ({ children, onPress, ...rest }: any) => (
   <TouchableOpacity
+    {...rest}
     style={navStyles.centralButtonContainer}
     onPress={onPress}
     activeOpacity={0.8}
@@ -73,11 +75,19 @@ const CentralButton = ({ children, onPress }: any) => (
  * Bottom Tab Navigator for DRIVERS
  */
 const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () => void }) => {
-  
+  const [isRefreshPulse, setIsRefreshPulse] = useState(false);
+  const { trigger } = useRefresh();
+
   // Handler function that navigates to ActiveDriver
   const handleActiveDriversPress = () => {
     // Use the root navigation to navigate to ActiveDriver
     navigation.navigate('ActiveDriver');
+  };
+
+  const handleGlobalRefresh = () => {
+    setIsRefreshPulse(true);
+    setTimeout(() => setIsRefreshPulse(false), 800);
+    trigger();
   };
 
   return (
@@ -117,9 +127,18 @@ const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () 
         options={{
           tabBarLabel: () => null,
           tabBarButton: (props) => (
-            <CentralButton {...props}>
+            <CentralButton
+              {...props}
+              onPress={() => {
+                handleGlobalRefresh();
+              }}
+            >
               
-              <RotateCcw size={28} color="#FFFFFF" />
+              {isRefreshPulse ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <RotateCcw size={28} color="#FFFFFF" />
+              )}
             </CentralButton>
           ),
         }}
