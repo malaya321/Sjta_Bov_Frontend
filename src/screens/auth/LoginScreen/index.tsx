@@ -181,8 +181,8 @@ const LoginScreen = ({
     <SafeAreaView style={styles.container}>
       {/* <StatusBar
         barStyle="light-content"
-        backgroundColor="#78350f"
-        translucent={true}
+        backgroundColor="#5d0e0aff"
+        translucent={false}
       /> */}
       <ImageBackground
         source={{
