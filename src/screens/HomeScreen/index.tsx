@@ -65,7 +65,6 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
   const [checkoutBatteryLevel, setCheckoutBatteryLevel] = useState(82);
   const [checkoutBatteryText, setCheckoutBatteryText] = useState('');
   const [checkoutCapturedImageFile, setCheckoutCapturedImageFile] = useState<ImageFile | null>(null);
-  const [password, setPassword] = useState(''); // For password input during checkout
   const [driverHomeScreenData, setDriverHomeScreenData] = useState<any>({});
   const [vehicleStatusData, setVehicleStatusData] = useState<any>({});
     const [selectedStatus, setSelectedStatus] = useState<any>(null);
@@ -241,7 +240,6 @@ const {
       setCheckoutCapturedImageFile(null);
       setCheckoutBatteryText('');
       setCheckoutBatteryLevel(82);
-      setPassword('');
       resetError();
     } else {
       console.log('Cannot checkout - not checked in');
@@ -259,14 +257,9 @@ const {
     setShowCheckoutModal(false);
     setCheckoutCapturedImageFile(null);
     setCheckoutBatteryText('');
-    setPassword('');
     await AsyncStorage.removeItem('checkinTime');
     setCheckinTime(null);
     Alert.alert('Success', 'You have successfully checked out!');
-  };
-
-  const handlePasswordChange = (text: string) => {
-    setPassword(text);
   };
 
   const handleStatusChange = () => {
@@ -437,14 +430,12 @@ const {
             setShowCheckoutModal(false);
             setCheckoutCapturedImageFile(null);
             setCheckoutBatteryText('');
-            setPassword('');
           }
         }}
         capturedImageFile={checkoutCapturedImageFile}
         batteryText={checkoutBatteryText}
         batteryLevel={checkoutBatteryLevel}
          onBatteryImageCaptured={() => {}}
-        // password={password}
         checkinTime={checkinTime}
         isIOS={isIOS}
         isSmallDevice={isSmallDevice}
@@ -453,7 +444,6 @@ const {
         onImageCaptured={handleCheckoutImageCaptured}
         onBatteryTextChange={setCheckoutBatteryText}
         onBatteryLevelChange={setCheckoutBatteryLevel}
-        // onPasswordChange={handlePasswordChange}
         onCheckoutSuccess={handleCheckoutSuccess}
         checkout={checkout}
       />

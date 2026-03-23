@@ -21,6 +21,7 @@ import { X, Battery, CheckCircle2, ChevronRight, ChevronLeft, Info, AlertCircle,
 import Geolocation from '@react-native-community/geolocation';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
 import BatteryPhotoComponent from '../../../components/BatteryPhotoComponent';
+import { ConfirmationAlert } from '../../../components/ConfirmationAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -80,6 +81,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
+  const [requirePassword, setRequirePassword] = useState(false);
+  const [password, setPassword] = useState('');
   const [location, setLocation] = useState<LocationType>({
     latitude: null,
     longitude: null,
@@ -89,7 +92,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
   const [batteryPhoto, setBatteryPhoto] = useState<ImageFile | null>(null);
+   const [showAlert, setShowAlert] = useState(false);
 // console.log(checkinTime,'checkinTime=====')
+
   // Request location permission
   const requestLocationPermission = async (): Promise<boolean> => {
     try {
@@ -244,7 +249,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       checkLocationPermission();
     }
   }, [visible]);
-
+useEffect(() => {
+    if (!verificationResult) {
+      setShowAlert(false);
+      return;
+    }
+    if (verificationResult.success) {
+      setShowAlert(false);
+      return;
+    }
+    setShowAlert(true);
+  }, [verificationResult?.success, verificationResult?.message]);
   // Reset states when modal opens
   useEffect(() => {
     if (visible) {
@@ -254,6 +269,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setLocationError(null);
       setIsGettingLocation(false);
       setBatteryPhoto(null);
+      setRequirePassword(false);
+      setPassword('');
     }
   }, [visible]);
 
@@ -264,6 +281,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleNextStep = () => {
     if (currentStep === 1 && capturedImageFile) {
+      if (requirePassword && !password.trim()) {
+        Alert.alert('Password Required', 'Please enter your password to continue.');
+        return;
+      }
       setCurrentStep(2);
     } else if (currentStep === 2 && batteryPhoto) {
       setCurrentStep(3);
@@ -290,6 +311,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (!batteryPhoto) {
       Alert.alert('Missing Battery Photo', 'Please capture battery photo.');
       setCurrentStep(2);
+      return;
+    }
+
+    if (requirePassword && !password.trim()) {
+      Alert.alert('Password Required', 'Please enter your password to proceed.');
+      setCurrentStep(1);
       return;
     }
 
@@ -350,6 +377,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       
       // Add battery status text
       checkoutFormData.append('check_out_battery_status', batteryText || 'No remarks');
+
+      // Add password (send empty string when not required)
+      checkoutFormData.append('password', password || '');
       
       // Add location if available
       if (locationData.latitude && locationData.longitude) {
@@ -372,14 +402,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       // console.log('Checkout result:2', checkoutResult);
       // checkoutResult
       // onCheckoutSuccess()
-      if(checkoutResult.status===1){
-        onClose()
+      if (checkoutResult?.status === 1) {
+        onClose();
+        setVerificationResult({
+          success: true,
+          message: 'Check-out completed successfully!'
+        });
+      } else {
+        const failureMessage =
+          checkoutResult?.message || 'Check-out failed. Please try again.';
+        setRequirePassword(true);
+        setVerificationResult({
+          success: false,
+          message: failureMessage
+        });
+        setCurrentStep(1);
       }
-  
-      setVerificationResult({
-        success: true,
-        message: 'Check-out completed successfully!'
-      });
       
       // Show success and close after delay
       // setTimeout(() => {
@@ -400,10 +438,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         errorMessage = 'Location is required for check-out. Please enable location services.';
       }
       
+      setRequirePassword(true);
       setVerificationResult({
         success: false,
         message: errorMessage
       });
+      setCurrentStep(1);
       // onClose()
       // Alert.alert('Check-out Failed', errorMessage);
     } finally {
@@ -499,6 +539,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   return (
+    <>
     <Modal
       visible={visible}
       animationType="slide"
@@ -551,6 +592,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     Ensure your face is well-lit and remove any sunglasses or hats.
                   </Text>
                 </View>
+
+                {requirePassword && (
+                  <View style={styles.passwordSection}>
+                    <Text style={styles.passwordLabel}>Password</Text>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#94A3B8"
+                      // secureTextEntry
+                      autoCapitalize="none"
+                    />
+                    <Text style={styles.passwordHint}>
+                      Checkout failed previously. Please enter your password and try again.
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : currentStep === 2 ? (
               <View style={styles.stepWrapper}>
@@ -688,12 +747,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <TouchableOpacity 
               style={[
                 styles.primaryButton,
-                (currentStep === 1 && !capturedImageFile) && styles.buttonDisabled,
+                (currentStep === 1 && (!capturedImageFile || (requirePassword && !password.trim()))) && styles.buttonDisabled,
                 (currentStep === 2 && !batteryPhoto) && styles.buttonDisabled
               ]}
               onPress={currentStep === 3 ? handleVerifyAndSubmit : handleNextStep}
               disabled={
-                (currentStep === 1 && !capturedImageFile) ||
+                (currentStep === 1 && (!capturedImageFile || (requirePassword && !password.trim()))) ||
                 (currentStep === 2 && !batteryPhoto) ||
                 (currentStep === 3 && isVerifying)
               }
@@ -713,6 +772,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
+    <ConfirmationAlert
+              visible={showAlert}
+               title = 'Check-out Failed'
+               message = {verificationResult?.message}
+              // isCheckedIn={isCheckedIn}
+              onConfirm={()=>setShowAlert(false)}
+              onCancel={() => setShowAlert(false)}
+              confirmText = 'Ok'
+  cancelText = 'Cancel'
+            />
+    </>
   );
 };
 
@@ -800,6 +870,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0369A1',
     lineHeight: 20,
+  },
+  passwordSection: {
+    marginTop: 20,
+  },
+  passwordLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  passwordInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#1E293B',
+  },
+  passwordHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#64748B',
   },
   label: {
     fontSize: 16,
