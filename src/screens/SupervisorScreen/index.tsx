@@ -1487,9 +1487,13 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
 
       <ConfirmationAlert
         visible={showAlert}
+        title = 'Logout'
+  message = 'Are you sure you want to logout?'
         isCheckedIn={isCheckedIn}
         onConfirm={confirmLogout}
         onCancel={() => setShowAlert(false)}
+         confirmText = 'Logout'
+  cancelText = 'Cancel'
       />
     </SafeAreaView>
   );

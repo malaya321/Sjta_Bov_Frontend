@@ -22,6 +22,7 @@ import Geolocation from '@react-native-community/geolocation';
 import FaceDetectionComponent from '../../../components/FaceDetectionComponent';
 import BatteryPhotoComponent from '../../../components/BatteryPhotoComponent'; // Add this import
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ConfirmationAlert } from '../../../components/ConfirmationAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -87,6 +88,7 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
   // Add state for battery photo
   const [batteryPhoto, setBatteryPhoto] = useState<ImageFile | null>(null);
+  const [showAlert, setShowAlert] = useState(false);
 
   // Request location permission
   const requestLocationPermission = async (): Promise<boolean> => {
@@ -252,6 +254,19 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (!verificationResult) {
+      setShowAlert(false);
+      return;
+    }
+    if (verificationResult.success) {
+      setShowAlert(false);
+      return;
+    }
+    setShowAlert(true);
+  }, [verificationResult?.success, verificationResult?.message]);
+   
+
   // Reset states when modal opens
   useEffect(() => {
     if (visible) {
@@ -286,14 +301,32 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   };
 
   const handleVerifyAndSubmit = async () => {
+    // setVerificationResult(null);
     if (!capturedImageFile) {
-      Alert.alert('Missing Photo', 'Please capture your face photo first.');
+       setVerificationResult({
+        success: false,
+        message: 'Please capture your face photo first.'
+      });
+      // Alert.alert('Missing Photo', 'Please capture your face photo first.');
       setCurrentStep(1);
       return;
     }
 
-    if (!batteryLevel) {
-      Alert.alert('Missing Battery Level', 'Please select battery percentage.');
+    if (!batteryPhoto) {
+       setVerificationResult({
+        success: false,
+        message: 'Please capture Battery photo.'
+      });
+      // Alert.alert('Missing Battery Level', 'Please select battery percentage.');
+      setCurrentStep(2);
+      return;
+    }
+     if (!batteryText) {
+       setVerificationResult({
+        success: false,
+        message: 'Please Enter Battery status Field.'
+      });
+      // Alert.alert('Missing Battery Level', 'Please select battery percentage.');
       setCurrentStep(2);
       return;
     }
@@ -385,20 +418,20 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
       let errorMessage = err.message || 'Check-in failed. Please try again.';
       
       // Parse specific error messages from backend
-      if (err.message?.toLowerCase().includes('face') || 
-          err.message?.toLowerCase().includes('verification') || 
-          err.message?.toLowerCase().includes('identity')) {
-        errorMessage = 'Identity verification failed. Please take a clear face photo and try again.';
-      } else if (err.message?.toLowerCase().includes('location')) {
-        errorMessage = 'Location is required for check-in. Please enable location services.';
-      }
+      // if (err.message?.toLowerCase().includes('face') || 
+      //     err.message?.toLowerCase().includes('verification') || 
+      //     err.message?.toLowerCase().includes('identity')) {
+      //   errorMessage = 'Identity verification failed. Please take a clear face photo and try again.';
+      // } else if (err.message?.toLowerCase().includes('location')) {
+      //   errorMessage = 'Location is required for check-in. Please enable location services.';
+      // }
       
       setVerificationResult({
         success: false,
         message: errorMessage
       });
-      
-      Alert.alert('Check-in Failed', errorMessage);
+     
+      // Alert.alert('Check-in Failed', errorMessage);
     } finally {
       setIsVerifying(false);
     }
@@ -571,7 +604,8 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
   };
 
   return (
-    <Modal
+    <>
+       <Modal
       visible={visible}
       animationType="slide"
       presentationStyle="fullScreen"
@@ -823,6 +857,18 @@ const CheckinModal: React.FC<CheckinModalProps> = ({
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
+    <ConfirmationAlert
+              visible={showAlert}
+               title = 'Check-in Failed'
+               message = {verificationResult?.message}
+              // isCheckedIn={isCheckedIn}
+              onConfirm={()=>setShowAlert(false)}
+              onCancel={() => setShowAlert(false)}
+              confirmText = 'Ok'
+  cancelText = 'Cancel'
+            />
+    </>
+ 
   );
 };
 

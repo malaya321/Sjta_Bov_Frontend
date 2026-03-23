@@ -12,7 +12,7 @@ interface ConfirmLogoutAlertProps {
   visible: boolean;
   title?: string;
   message?: string;
-  isCheckedIn: boolean;
+  isCheckedIn?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   confirmText?: string;
@@ -21,13 +21,13 @@ interface ConfirmLogoutAlertProps {
 
 export const ConfirmationAlert: React.FC<ConfirmLogoutAlertProps> = ({
   visible,
-  title = 'Logout',
-  message = 'Are you sure you want to logout?',
+  title = '',
+  message = '',
   isCheckedIn,
   onConfirm,
   onCancel,
-  confirmText = 'Logout',
-  cancelText = 'Cancel',
+  confirmText = '',
+  cancelText = '',
 }) => {
   const handleConfirm = () => {
     if (isCheckedIn && (title == 'Logout')) {

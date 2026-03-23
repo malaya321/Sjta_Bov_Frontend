@@ -460,10 +460,14 @@ const {
       
       {/* Logout Confirmation Alert */}
       <ConfirmationAlert
+      title = 'Logout'
+      message = 'Are you sure you want to logout?'
         visible={showAlert}
         isCheckedIn={isCheckedIn}
         onConfirm={confirmLogout}
         onCancel={() => setShowAlert(false)}
+         confirmText = 'Logout'
+       cancelText = 'Cancel'
       />
       
       <View style={styles.footer}>
