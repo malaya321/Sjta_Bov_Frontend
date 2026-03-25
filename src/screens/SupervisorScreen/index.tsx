@@ -1525,7 +1525,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9D140C',
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
-    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 5,
     paddingBottom: 25,
     paddingHorizontal: 20,
     elevation: 5,
