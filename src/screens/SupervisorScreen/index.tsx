@@ -1,5 +1,5 @@
 // src/screens/supervisor/SupervisorScreen.tsx
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // Add useRef
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'; // Add useRef
 import RosterManagementTable from '../../components/RosterManagementTable';
 import { 
   View, 
@@ -11,6 +11,8 @@ import {
   TextInput, 
   Alert, 
   Platform,
+  Image,
+  Pressable,
   Dimensions,
   Modal,
   ActivityIndicator,
@@ -37,9 +39,10 @@ import {
   Filter
 } from 'lucide-react-native';
 import { useLogout } from '../../hooks/useAuth';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ConfirmationAlert } from '../../components/ConfirmationAlert';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   useSupervisorDashboard,
   useReassignDriver,
@@ -58,6 +61,7 @@ type RootStackParamList = {
   DriverDetails: { driverId: string };
   VehicleDetails: { vehicleId: string };
   RosterDetails: { rosterId: string };
+  Profile: undefined;
 };
 
 interface RosterEntry {
@@ -187,7 +191,7 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
     isRefreshing,
     refresh
   } = useSupervisorDashboard();
-
+// console.log(todayRosters,'activeDrivers++superviser+++++++++++++=')
   const { data: notificationsData } = useNotifications({ unreadOnly: true });
   const notifications = notificationsData?.data || [];
   
@@ -242,6 +246,9 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
   const [selectedVehicleForAssignment, setSelectedVehicleForAssignment] = useState<Vehicle | null>(null);
   const [justificationText, setJustificationText] = useState('');
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('User');
   // Map API drivers to your Driver interface
   const mapApiDriversToDrivers = (apiDrivers: any[]): Driver[] => {
     if (!apiDrivers || !Array.isArray(apiDrivers)) return [];
@@ -513,6 +520,45 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
       refetchVehicles();
     }
   }, [showVehicleModal, refetchVehicles]);
+
+  const loadStoredProfilePhoto = useCallback(async () => {
+    const storedPhoto = await AsyncStorage.getItem('profilePhotoUri');
+    if (storedPhoto) {
+      setProfilePhotoUri(storedPhoto);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStoredProfilePhoto();
+    }, [loadStoredProfilePhoto])
+  );
+
+  useEffect(() => {
+    const profileImage = todayRosters?.data?.user?.profile_image;
+    const profileName =
+      todayRosters?.data?.user?.name || todayRosters?.data?.user?.username;
+
+    if (profileImage) {
+      setProfilePhotoUri(profileImage);
+      AsyncStorage.setItem('profilePhotoUri', profileImage);
+    }
+
+    if (profileName) {
+      setUserName(profileName);
+    }
+  }, [
+    todayRosters?.data?.user?.profile_image,
+    todayRosters?.data?.user?.name,
+    todayRosters?.data?.user?.username,
+  ]);
+
+  const userInitials = useMemo(() => {
+    const parts = userName.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return 'U';
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || 'U';
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+  }, [userName]);
 
   const confirmLogout = async () => {
     try {
@@ -846,11 +892,48 @@ const SupervisorScreen = ({ onLogout }: SupervisorScreenProps) => {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutBtn} onPress={() => setShowAlert(true)}>
-              <LogOut size={22} color="#FFF" />
+            <TouchableOpacity
+              style={styles.avatarButton}
+              onPress={() => setShowUserMenu((prev) => !prev)}
+            >
+              {profilePhotoUri ? (
+                <Image source={{ uri: profilePhotoUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>{userInitials}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
+
+        {showUserMenu && (
+          <View style={styles.userMenuWrapper}>
+            <Pressable style={styles.userMenuBackdrop} onPress={() => setShowUserMenu(false)} />
+            <View style={styles.userMenu}>
+            <TouchableOpacity
+              style={styles.userMenuItem}
+              onPress={() => {
+                setShowUserMenu(false);
+                navigation.navigate('Profile');
+              }}
+            >
+              <User size={16} color="#0F172A" />
+              <Text style={styles.userMenuText}>My Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.userMenuItem}
+              onPress={() => {
+                setShowUserMenu(false);
+                setShowAlert(true);
+              }}
+            >
+              <LogOut size={16} color="#DC2626" />
+              <Text style={[styles.userMenuText, styles.userMenuLogoutText]}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+          </View>
+        )}
 
         {/* Notifications Dropdown */}
         {showNotifications && (
@@ -1558,6 +1641,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  avatarButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#FDE68A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9D140C',
+  },
   notificationBtn: {
     position: 'relative',
     padding: 8,
@@ -1582,6 +1693,51 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 12,
+  },
+  userMenuWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  userMenuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  userMenu: {
+    position: 'absolute',
+    top: 85,
+    right: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    width: 180,
+    zIndex: 1000,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  userMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  userMenuText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  userMenuLogoutText: {
+    color: '#DC2626',
   },
   notificationsDropdown: {
     position: 'absolute',

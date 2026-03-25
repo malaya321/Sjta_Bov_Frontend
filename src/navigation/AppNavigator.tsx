@@ -30,6 +30,7 @@ import SupervisorScreen from '../screens/SupervisorScreen';
 import ActiveDriversScreen from '../screens/ActiveDriversScreen';
 import AvailableBovsScreen from '../screens/AvailableBovScreen';
 import CheckinScreen from '../screens/common';
+import ProfileScreen from '../screens/profile';
 import { useRefresh } from '../context/RefreshContext';
 // Types
 export type RootStackParamList = {
@@ -38,6 +39,7 @@ export type RootStackParamList = {
   SupervisorStack: undefined;
   ActiveDriver: undefined; // Add to root stack
   AvailableBov:undefined;
+  Profile: undefined;
 };
 
 export type MainTabsParamList = {
@@ -46,6 +48,7 @@ export type MainTabsParamList = {
   Action: undefined;
   Alerts: undefined;
   More: undefined;
+  Profile: undefined;
   Status: undefined;
   Drivers: undefined;
   Roster: undefined;
@@ -151,12 +154,19 @@ const TabNavigator = ({ navigation, onLogout }: { navigation: any; onLogout: () 
         }}
       />
       <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen} 
+        options={{
+          tabBarIcon: ({ color }) => <Users size={22} color={color} />,
+        }}
+      />
+      {/* <Tab.Screen 
         name="More" 
         component={CheckinScreen} 
         options={{
           tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
-      />
+      /> */}
     </Tab.Navigator>
   );
 };
@@ -281,6 +291,7 @@ const AppNavigator = () => {
            <Stack.Screen name="SupervisorStack">
             {() => <SupervisorScreen onLogout={handleLogout} />}
           </Stack.Screen>
+          <Stack.Screen name="Profile" component={ProfileScreen} />
            {/* <Stack.Screen name="SupervisorStack">
             {() => <SupervisorTabNavigator onLogout={handleLogout} />}
           </Stack.Screen> */}
@@ -300,6 +311,7 @@ const AppNavigator = () => {
             <Stack.Screen name="MainTabs">
               {(props) => <TabNavigator {...props} onLogout={handleLogout} />}
             </Stack.Screen>
+            <Stack.Screen name="Profile" component={ProfileScreen} />
            
           </>
         )}

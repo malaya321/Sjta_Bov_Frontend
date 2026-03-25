@@ -106,6 +106,7 @@ export const authService = {
       await Promise.all([
         AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
         AsyncStorage.removeItem(USER_STORAGE_KEY),
+        AsyncStorage.removeItem('profilePhotoUri'),
         api.setAuthToken?.(null), 
       ]);
     }

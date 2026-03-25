@@ -265,7 +265,7 @@ const LoginScreen = ({
                         onBlur={handleBlur('userId')}
                         autoCapitalize="none"
                         // keyboardType="phone-pad"
-                        maxLength={10}
+                        maxLength={11}
                         editable={!isLoading}
                         selectTextOnFocus={!isLoading}
                       />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,9 @@ import {
   StyleSheet,
   Image,
   Platform,
+  Pressable,
 } from 'react-native';
-import { Bell, LogOut } from 'lucide-react-native';
+import { Bell, LogOut, User } from 'lucide-react-native';
 
 type HeaderSectionProps = {
   isIOS: boolean;
@@ -16,6 +17,8 @@ type HeaderSectionProps = {
   isCheckedIn: boolean;
   isLoggingOut: boolean;
   hasNotifications: boolean;
+  profilePhotoUri?: string | null;
+  userName?: string;
   onNotificationPress: () => void;
   onProfilePress: () => void;
   onLogoutPress: () => void;
@@ -28,10 +31,27 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
   isCheckedIn,
   isLoggingOut,
   hasNotifications,
+  profilePhotoUri,
+  userName,
   onNotificationPress,
   onProfilePress,
   onLogoutPress,
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+
+  const initials = useMemo(() => {
+    const nameSource = userName || driverData?.driver_name || '';
+    const parts = nameSource.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return 'U';
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || 'U';
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
+  }, [userName, driverData?.driver_name]);
+
+  const handleMenuAction = (action: () => void) => {
+    setShowMenu(false);
+    action();
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.headerTop}>
@@ -58,16 +78,44 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             <Bell size={isSmallDevice ? 18 : 20} color="#94A3B8" />
             {hasNotifications && <View style={styles.notificationBadge} />}
           </TouchableOpacity>
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={[styles.avatarContainer, isIOS && styles.iosShadow]}
-            onPress={onProfilePress}
+            onPress={() => setShowMenu((prev) => !prev)}
             activeOpacity={0.7}
             disabled={isLoggingOut}
           >
-           
-          </TouchableOpacity> */}
+            {profilePhotoUri ? (
+              <Image source={{ uri: profilePhotoUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
+
+      {showMenu && (
+        <View style={styles.menuWrapper}>
+          <Pressable style={styles.menuBackdrop} onPress={() => setShowMenu(false)} />
+          <View style={[styles.menu, isIOS && styles.iosShadow]}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuAction(onProfilePress)}
+          >
+            <User size={16} color="#0F172A" />
+            <Text style={styles.menuText}>My Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => handleMenuAction(onLogoutPress)}
+          >
+            <LogOut size={16} color="#DC2626" />
+            <Text style={[styles.menuText, styles.menuLogoutText]}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+        </View>
+      )}
 
       <View style={[styles.profileCard, isIOS && styles.iosShadow]}>
         <View style={styles.profileContent}>
@@ -189,9 +237,9 @@ const styles = StyleSheet.create({
     borderColor: '#FFF',
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#FDE68A',
@@ -206,6 +254,66 @@ const styles = StyleSheet.create({
         elevation: 2,
       },
     }),
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    flex: 1,
+    backgroundColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#9D140C',
+  },
+  menu: {
+    position: 'absolute',
+    right: 20,
+    top: 72,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    width: 180,
+    zIndex: 20,
+    ...Platform.select({
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  menuWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  menuLogoutText: {
+    color: '#DC2626',
   },
   profileCard: {
     backgroundColor: '#D97706',

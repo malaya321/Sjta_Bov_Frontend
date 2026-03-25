@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   SafeAreaView,
@@ -71,8 +71,15 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
     const [justifications, setJustification] = useState('');
   const [vehicleOperationalParams,setVehicleOperationalParams]= useState<any>({});
   const [isUpdateVehicleOperationalStatus,setIsUpdateVehicleOperationalStatus]= useState<any>(false);
+  const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   // console.log(selectedStatus,"selectedStatus++++++++++++")
   const navigation:any = useNavigation();
+  const isFocused = useIsFocused();
+
+  const loadProfilePhoto = useCallback(async () => {
+    const storedPhoto = await AsyncStorage.getItem('profilePhotoUri');
+    setProfilePhotoUri(storedPhoto);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,11 +88,14 @@ const HomeScreen = ({ onLogout }: { onLogout: () => void }) => {
         StatusBar.setBackgroundColor('rgb(157, 20, 12)');
         StatusBar.setTranslucent(false);
       }
-      return () => {
-        // Optional: reset on blur if needed
-      };
-    }, [])
+      loadProfilePhoto();
+    }, [loadProfilePhoto])
   );
+  useEffect(() => {
+    if (isFocused) {
+      loadProfilePhoto();
+    }
+  }, [isFocused, loadProfilePhoto]);
   const { 
     data:driverHomeScreenAPIData, 
     isLoading, 
@@ -305,12 +315,14 @@ const {
           isCheckedIn={isCheckedIn}
           isLoggingOut={isLoggingOut}
           hasNotifications={hasNotifications}
+          profilePhotoUri={profilePhotoUri || driverHomeScreenData?.profile_image}
+          userName={driverHomeScreenData?.driver_name}
           onNotificationPress={() => {
             setHasNotifications(false);
             navigation.navigate('Alerts');
             // Alert.alert('Notifications', 'No new notifications');
           }}
-          onProfilePress={() => Alert.alert('Profile', 'View profile details')}
+          onProfilePress={() => navigation.navigate('Profile')}
           onLogoutPress={() => setShowAlert(true)}
         />
 
