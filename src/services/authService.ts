@@ -34,6 +34,25 @@ const TOKEN_STORAGE_KEY = 'userToken';
 const USER_STORAGE_KEY = 'userData';
 
 export const authService = {
+  changePassword: async (payload: {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+  }): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.post<ApiResponse<any>>('/change-password', payload);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        throw {
+          message: error.response.data.message || 'Change password failed',
+          errors: error.response.data.errors,
+          status: error.response.status,
+        };
+      }
+      throw error;
+    }
+  },
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     try {
       const response = await api.post<ApiResponse<LoginResponse>>('/login', credentials);

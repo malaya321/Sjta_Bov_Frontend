@@ -87,6 +87,23 @@ export const useLogout = () => {
   });
 };
 
+// Change password mutation hook
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: async (payload: {
+      current_password: string;
+      password: string;
+      password_confirmation: string;
+    }) => {
+      const response = await authService.changePassword(payload);
+      return response;
+    },
+    onError: (error: any) => {
+      console.error('Change password error:', error);
+    },
+  });
+};
+
 // Hook to check if user is authenticated
 export const useAuth = () => {
   const queryClient = useQueryClient();
