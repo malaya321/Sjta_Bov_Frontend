@@ -518,6 +518,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius:55
   },
   photoInitials: {
     fontSize: 32,
